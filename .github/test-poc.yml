@@ -1,0 +1,86 @@
+name: Power Platform Solution Export & Import (App Registration)
+
+on:
+  workflow_dispatch:
+    inputs:
+      solution_name:
+        description: "test"
+        required: true
+      source_env_url:
+        description: "https://operations-gesagenttest.crm4.dynamics.com/"
+        required: true
+      target_env_url:
+        description: "https://operations-gescopilottest.crm.dynamics.com/"
+        required: true
+      export_managed:
+        description: "Export as managed? (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  export-import-solution:
+    runs-on: windows-latest
+
+    env:
+      SOLUTION_NAME: ${{ github.event.inputs.solution_name }}
+      SOURCE_ENV: ${{ github.event.inputs.source_env_url }}
+      TARGET_ENV: ${{ github.event.inputs.target_env_url }}
+      EXPORT_MANAGED: ${{ github.event.inputs.export_managed }}
+      SOLUTION_PATH: ${{ github.workspace }}\${{ github.event.inputs.solution_name }}.zip
+
+      # 🔒 Store these in GitHub Secrets
+      SOURCE_CLIENT_ID: ${{ secrets.SOURCE_CLIENT_ID }}
+      SOURCE_TENANT_ID: ${{ secrets.SOURCE_TENANT_ID }}
+      SOURCE_CLIENT_SECRET: ${{ secrets.SOURCE_CLIENT_SECRET }}
+
+      TARGET_CLIENT_ID: ${{ secrets.TARGET_CLIENT_ID }}
+      TARGET_TENANT_ID: ${{ secrets.TARGET_TENANT_ID }}
+      TARGET_CLIENT_SECRET: ${{ secrets.TARGET_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Power Platform CLI
+        run: npm install -g pac
+
+      # 🔹 Authenticate to Source Environment
+      - name: Power Platform Auth (Source)
+        run: |
+          pac auth create --name sourceEnv `
+            --url $env:SOURCE_ENV `
+            --applicationId $env:SOURCE_CLIENT_ID `
+            --tenant $env:SOURCE_TENANT_ID `
+            --clientSecret $env:SOURCE_CLIENT_SECRET
+          pac auth select --name sourceEnv
+
+      # 🔹 Export the Solution
+      - name: Export Solution from Source
+        run: |
+          pac solution export `
+            --name $env:SOLUTION_NAME `
+            --outputFile $env:SOLUTION_PATH `
+            --managed $env:EXPORT_MANAGED
+
+      - name: Upload Exported Solution as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.SOLUTION_NAME }}-solution
+          path: ${{ env.SOLUTION_PATH }}
+
+      # 🔹 Authenticate to Target Environment
+      - name: Power Platform Auth (Target)
+        run: |
+          pac auth create --name targetEnv `
+            --url $env:TARGET_ENV `
+            --applicationId $env:TARGET_CLIENT_ID `
+            --tenant $env:TARGET_TENANT_ID `
+            --clientSecret $env:TARGET_CLIENT_SECRET
+          pac auth select --name targetEnv
+
+      # 🔹 Import the Solution
+      - name: Import Solution to Target
+        run: |
+          pac solution import `
+            --path $env:SOLUTION_PATH `
+            --activate-plugins true
