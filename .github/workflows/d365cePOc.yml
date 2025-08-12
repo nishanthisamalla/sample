@@ -1,56 +1,48 @@
-name: Deploy Solution with PAC CLI (Entra ID Auth)
+name: Power Platform Solution Migration
 
 on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  migrate-solution:
     runs-on: windows-latest
     steps:
-      - name: Checkout code
+      # Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # Install PAC CLI directly from Microsoft installer
+      # Install Power Platform CLI
       - name: Install Power Platform CLI
-        run: |
-          Invoke-WebRequest -Uri https://aka.ms/paccli -OutFile pac.msi
-          Start-Process msiexec.exe -ArgumentList '/i', 'pac.msi', '/quiet', '/qn', '/norestart' -Wait
-          $env:PATH += ";$env:ProgramFiles\Microsoft Power Platform CLI"
-          
+        uses: microsoft/powerplatform-actions/setup-pac-cli@v1
 
-      # Authenticate to SOURCE environment using Entra ID App Registration
-      - name: Authenticate SOURCE environment
+      # Authenticate to source environment
+      - name: Authenticate Source
         run: |
           pac auth create `
-            --name sourceEnv `
-            --applicationId $env:SOURCE_CLIENT_ID `
-            --clientSecret $env:SOURCE_CLIENT_SECRET `
-            --tenant $env:SOURCE_TENANT_ID
+            --environment "<SOURCE_ENV_URL>" `
+            --applicationId "${{ secrets.SOURCE_CLIENT_ID }}" `
+            --tenant "${{ secrets.SOURCE_TENANT_ID }}" `
+            --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
 
-      # Authenticate to TARGET environment using Entra ID App Registration
-      - name: Authenticate TARGET environment
+      # Authenticate to target environment
+      - name: Authenticate Target
         run: |
           pac auth create `
-            --name targetEnv `
-            --applicationId $env:TARGET_CLIENT_ID `
-            --clientSecret $env:TARGET_CLIENT_SECRET `
-            --tenant $env:TARGET_TENANT_ID
+            --environment "<TARGET_ENV_URL>" `
+            --applicationId "${{ secrets.TARGET_CLIENT_ID }}" `
+            --tenant "${{ secrets.TARGET_TENANT_ID }}" `
+            --clientSecret "${{ secrets.TARGET_CLIENT_SECRET }}"
 
-      # Example: Export from SOURCE and import to TARGET
-      - name: Export solution from SOURCE
+      # Export solution from source
+      - name: Export Solution
         run: |
-          pac auth select --name sourceEnv
-          pac solution export --path exported.zip --name MySolution --managed true --overwrite
+          pac solution export `
+            --name "test" `
+            --path "./test.zip" `
+            --managed false
 
-      - name: Import solution into TARGET
+      # Import solution to target
+      - name: Import Solution
         run: |
-          pac auth select --name targetEnv
-          pac solution import --path exported.zip --publish-changes true
-          
-    env:
-      SOURCE_CLIENT_ID: ${{ secrets.SOURCE_CLIENT_ID }}
-      SOURCE_TENANT_ID: ${{ secrets.SOURCE_TENANT_ID }}
-      SOURCE_CLIENT_SECRET: ${{ secrets.SOURCE_CLIENT_SECRET }}
-      TARGET_CLIENT_ID: ${{ secrets.TARGET_CLIENT_ID }}
-      TARGET_TENANT_ID: ${{ secrets.TARGET_TENANT_ID }}
-      TARGET_CLIENT_SECRET: ${{ secrets.TARGET_CLIENT_SECRET }}
+          pac solution import `
+            --path "./test.zip"
