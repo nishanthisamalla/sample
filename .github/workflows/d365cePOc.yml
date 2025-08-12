@@ -2,46 +2,44 @@ name: Power Platform Solution CI
 
 on:
   workflow_dispatch:
-
 jobs:
   build:
-    runs-on: windows-latest  # Or use ubuntu-latest if preferred
+    runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1
 
       - name: Export Solution
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
-          environment-url: ${{ secrets.SOURCE_ENV_URL }}
-          user-name: ${{ secrets.SOURCE_USER_NAME }}
-          password-secret: ${{ secrets.SOURCE_PASSWORD }}
-          solution-name: ${{ secrets.SOLUTION_NAME }}
-          solution-output-file: 'aSolution.zip'
+          environment-url: 'https://operations-gesagenttest.crm4.dynamics.com/'
+          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
+          solution-name: aSolution
+          solution-output-file: 'test.zip'
           working-directory: 'out'
 
       - name: Unpack Solution
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
-          solution-file: 'out/aSolution.zip'
-          solution-folder: 'out/solutions/solution_one'
+          solution-file: 'out/test.zip'
+          solution-folder: 'out/solutions/test'
           solution-type: 'Unmanaged'
           overwrite-files: true
 
       - name: Publish Solution
         uses: microsoft/powerplatform-actions/publish-solution@v1
         with:
-          environment-url: ${{ secrets.TARGET_ENV_URL }}
-          user-name: ${{ secrets.TARGET_USER_NAME }}
-          password-secret: ${{ secrets.TARGET_PASSWORD }}
+          environment-url: 'https://operations-gesagenttest.crm4.dynamics.com/'
+          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
 
-      - name: Prepare solution changes for source control
+      - name: Prepare solution changes for check-in into source control
         uses: microsoft/powerplatform-actions/branch-solution@v1
         with:
-          solution-folder: 'out/solutions/solution_one'
-          solution-target-folder: 'src/solutions/solution1'
+          solution-folder: 'out/solutions/test'
+          solution-target-folder: 'src/solutions/test'
           token: ${{ secrets.GITHUB_TOKEN }}
