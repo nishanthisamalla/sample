@@ -13,11 +13,11 @@ jobs:
       - name: Export Solution
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
-          environment-url: 'https://operations-gesagenttest.crm4.dynamics.com/'
+          environment-url: 'https://operations-gesagenttest.crm4.dynamics.com'
           app-id: ${{ secrets.SOURCE_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
-          solution-name: aSolution
+          solution-name: test
           solution-output-file: 'test.zip'
           working-directory: 'out'
 
