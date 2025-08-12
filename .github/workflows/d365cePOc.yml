@@ -1,4 +1,4 @@
-name: Power Platform Solution Migration
+name: Power Platform Solution Deployment
 
 on:
   workflow_dispatch:
