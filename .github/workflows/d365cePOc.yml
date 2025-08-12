@@ -1,45 +1,52 @@
-name: Power Platform Solution CI
+name: Export and Import Solution
 
 on:
   workflow_dispatch:
+
 jobs:
-  build:
+  export-import:
     runs-on: windows-latest
 
     steps:
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # Install PAC CLI
+      - name: Setup Power Platform CLI
+        uses: microsoft/powerplatform-actions/setup-pac-cli@v1
+        with:
+          version: latest
+
+      # Authenticate to Source using Service Principal
+      - name: Auth to Source Environment
+        run: |
+          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" auth create ^
+            --url "https://operations-gesagenttest.crm4.dynamics.com/" ^
+            --tenant "${{ secrets.SOURCE_TENANT_ID }}" ^
+            --applicationId "${{ secrets.SOURCE_CLIENT_ID }}" ^
+            --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
+
+      # Export solution from source
       - name: Export Solution
-        uses: microsoft/powerplatform-actions/export-solution@v1
-        with:
-          environment-url: 'https://operations-gesagenttest.crm4.dynamics.com'
-          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
-          solution-name: test
-          solution-output-file: 'test.zip'
-          working-directory: 'out'
+        run: |
+          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" solution export ^
+            --path ./test.zip ^
+            --name "test" ^
+            --managed false ^
+            --overwrite
 
-      - name: Unpack Solution
-        uses: microsoft/powerplatform-actions/unpack-solution@v1
-        with:
-          solution-file: 'out/test.zip'
-          solution-folder: 'out/solutions/test'
-          solution-type: 'Unmanaged'
-          overwrite-files: true
+      # Authenticate to Target using Service Principal
+      - name: Auth to Target Environment
+        run: |
+          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" auth create ^
+            --url "https://TARGET_ENV.crm.dynamics.com" ^
+            --tenant "${{ secrets.TARGET_TENANT_ID }}" ^
+            --applicationId "${{ secrets.TARGET_CLIENT_ID }}" ^
+            --clientSecret "${{ secrets.TARGET_CLIENT_SECRET }}"
 
-      - name: Publish Solution
-        uses: microsoft/powerplatform-actions/publish-solution@v1
-        with:
-          environment-url: 'https://operations-gesagenttest.crm4.dynamics.com/'
-          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
-
-      - name: Prepare solution changes for check-in into source control
-        uses: microsoft/powerplatform-actions/branch-solution@v1
-        with:
-          solution-folder: 'out/solutions/test'
-          solution-target-folder: 'src/solutions/test'
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # Import solution to target
+      - name: Import Solution
+        run: |
+          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" solution import ^
+            --path ./aSolution.zip ^
+            --publish-changes true
