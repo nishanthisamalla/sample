@@ -28,7 +28,7 @@ jobs:
       EXPORT_MANAGED: ${{ github.event.inputs.export_managed }}
       SOLUTION_PATH: ${{ github.workspace }}\${{ github.event.inputs.solution_name }}.zip
 
-      # 🔒 Secrets (set these in GitHub repository settings)
+      # 🔒 Store these in GitHub Secrets
       SOURCE_CLIENT_ID: ${{ secrets.SOURCE_CLIENT_ID }}
       SOURCE_TENANT_ID: ${{ secrets.SOURCE_TENANT_ID }}
       SOURCE_CLIENT_SECRET: ${{ secrets.SOURCE_CLIENT_SECRET }}
@@ -41,11 +41,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ✅ Install PAC directly (no Node.js dependency)
       - name: Install Power Platform CLI
-        run: |
-          Invoke-WebRequest -Uri https://aka.ms/PowerAppsCLI -OutFile pac.msi
-          msiexec /i pac.msi /quiet /norestart
+        run: npm install -g pac
 
       # 🔹 Authenticate to Source Environment
       - name: Power Platform Auth (Source)
