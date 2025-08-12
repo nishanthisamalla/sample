@@ -1,48 +1,81 @@
-name: Power Platform Solution Deployment
+name: Power Platform Solution Export / Import
 
 on:
   workflow_dispatch:
+    inputs:
+      solution_name:
+        description: "Solution name"
+        required: true
 
 jobs:
-  migrate-solution:
+  export-import:
     runs-on: windows-latest
+    env:
+      SOLUTION_NAME: ${{ github.event.inputs.solution_name }}
+      SOURCE_ENV_URL: ${{ secrets.SOURCE_ENV_URL }}
+      TARGET_ENV_URL: ${{ secrets.TARGET_ENV_URL }}
+      SOURCE_CLIENT_ID: ${{ secrets.SOURCE_CLIENT_ID }}
+      SOURCE_TENANT_ID: ${{ secrets.SOURCE_TENANT_ID }}
+      SOURCE_CLIENT_SECRET: ${{ secrets.SOURCE_CLIENT_SECRET }}
+      TARGET_CLIENT_ID: ${{ secrets.TARGET_CLIENT_ID }}
+      TARGET_TENANT_ID: ${{ secrets.TARGET_TENANT_ID }}
+      TARGET_CLIENT_SECRET: ${{ secrets.TARGET_CLIENT_SECRET }}
+
     steps:
-      # Checkout repo
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Install Power Platform CLI
       - name: Install Power Platform CLI
-        uses: microsoft/powerplatform-actions/setup-pac-cli@v1
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        with:
+          # (Optional) You can specify version if needed
 
-      # Authenticate to source environment
-      - name: Authenticate Source
+      - name: Verify PAC CLI Install
+        run: pac --version
+
+      - name: Authenticate to Source Env
         run: |
           pac auth create `
-            --environment "<SOURCE_ENV_URL>" `
-            --applicationId "${{ secrets.SOURCE_CLIENT_ID }}" `
-            --tenant "${{ secrets.SOURCE_TENANT_ID }}" `
-            --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
+            --name sourceEnv `
+            --environment $env:SOURCE_ENV_URL `
+            --applicationId $env:SOURCE_CLIENT_ID `
+            --clientSecret $env:SOURCE_CLIENT_SECRET `
+            --tenant $env:SOURCE_TENANT_ID
+          pac auth select --name sourceEnv
 
-      # Authenticate to target environment
-      - name: Authenticate Target
-        run: |
-          pac auth create `
-            --environment "<TARGET_ENV_URL>" `
-            --applicationId "${{ secrets.TARGET_CLIENT_ID }}" `
-            --tenant "${{ secrets.TARGET_TENANT_ID }}" `
-            --clientSecret "${{ secrets.TARGET_CLIENT_SECRET }}"
-
-      # Export solution from source
       - name: Export Solution
         run: |
           pac solution export `
-            --name "test" `
-            --path "./test.zip" `
-            --managed false
+            --name $env:SOLUTION_NAME `
+            --path exported_solution.zip `
+            --managed false `
+            --overwrite
 
-      # Import solution to target
+      - name: Upload Exported Solution
+        uses: actions/upload-artifact@v4
+        with:
+          name: exported_solution
+          path: exported_solution.zip
+
+      - name: Authenticate to Target Env
+        run: |
+          pac auth create `
+            --name targetEnv `
+            --environment $env:TARGET_ENV_URL `
+            --applicationId $env:TARGET_CLIENT_ID `
+            --clientSecret $env:TARGET_CLIENT_SECRET `
+            --tenant $env:TARGET_TENANT_ID
+          pac auth select --name targetEnv
+
+      - name: Download Exported Solution
+        uses: actions/download-artifact@v4
+        with:
+          name: exported_solution
+          path: .
+
       - name: Import Solution
         run: |
           pac solution import `
-            --path "./test.zip"
+            --path exported_solution.zip `
+            --activate-plugins true
+
