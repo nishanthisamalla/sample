@@ -1,81 +1,56 @@
-name: Power Platform Solution Export/Import
+name: Deploy Solution with PAC CLI (Entra ID Auth)
 
 on:
   workflow_dispatch:
 
-env:
-  SOURCE_ENV_URL: https://operations-gesagenttest.crm4.dynamics.com/
-  TARGET_ENV_URL: https://operations-gescopilottest.crm.dynamics.com/
-  SOLUTION_NAME: test
-  CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
-  TENANT_ID: ${{ secrets.PP_TENANT_ID }}
-  CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
-
 jobs:
-  export-import-solution:
+  deploy:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
       # Install PAC CLI directly from Microsoft installer
-      - name: Download PAC CLI Installer
+      - name: Install Power Platform CLI
         run: |
-          Invoke-WebRequest -Uri "https://aka.ms/powerplatform-vscode-cli" -OutFile pac.msi
-          Start-Process msiexec.exe -Wait -ArgumentList '/I pac.msi /quiet /norestart'
+          Invoke-WebRequest -Uri https://aka.ms/paccli -OutFile pac.msi
+          Start-Process msiexec.exe -ArgumentList '/i', 'pac.msi', '/quiet', '/qn', '/norestart' -Wait
+          $env:PATH += ";$env:ProgramFiles\Microsoft Power Platform CLI"
+          pac --version
 
-      - name: Verify PAC installation
-        run: pac --version
-
-      # Authenticate to source environment using Entra ID app
-      - name: Auth to source environment
+      # Authenticate to SOURCE environment using Entra ID App Registration
+      - name: Authenticate SOURCE environment
         run: |
           pac auth create `
             --name sourceEnv `
-            --url $env:SOURCE_ENV_URL `
-            --applicationId $env:CLIENT_ID `
-            --tenant $env:TENANT_ID `
-            --clientSecret $env:CLIENT_SECRET
+            --applicationId $env:SOURCE_CLIENT_ID `
+            --clientSecret $env:SOURCE_CLIENT_SECRET `
+            --tenant $env:SOURCE_TENANT_ID
 
-      - name: Set active auth profile (source)
-        run: pac auth select --name sourceEnv
-
-      - name: Export solution
-        run: |
-          pac solution export `
-            --name $env:SOLUTION_NAME `
-            --path exported_solution.zip `
-            --managed false `
-            --overwrite
-
-      - name: Upload exported solution
-        uses: actions/upload-artifact@v4
-        with:
-          name: exported_solution
-          path: exported_solution.zip
-
-      # Authenticate to target environment using Entra ID app
-      - name: Auth to target environment
+      # Authenticate to TARGET environment using Entra ID App Registration
+      - name: Authenticate TARGET environment
         run: |
           pac auth create `
             --name targetEnv `
-            --url $env:TARGET_ENV_URL `
-            --applicationId $env:CLIENT_ID `
-            --tenant $env:TENANT_ID `
-            --clientSecret $env:CLIENT_SECRET
+            --applicationId $env:TARGET_CLIENT_ID `
+            --clientSecret $env:TARGET_CLIENT_SECRET `
+            --tenant $env:TARGET_TENANT_ID
 
-      - name: Set active auth profile (target)
-        run: pac auth select --name targetEnv
-
-      - name: Download exported solution
-        uses: actions/download-artifact@v4
-        with:
-          name: exported_solution
-          path: .
-
-      - name: Import solution
+      # Example: Export from SOURCE and import to TARGET
+      - name: Export solution from SOURCE
         run: |
-          pac solution import `
-            --path exported_solution.zip `
-            --overwrite true
+          pac auth select --name sourceEnv
+          pac solution export --path exported.zip --name MySolution --managed true --overwrite
+
+      - name: Import solution into TARGET
+        run: |
+          pac auth select --name targetEnv
+          pac solution import --path exported.zip --publish-changes true
+          
+    env:
+      SOURCE_CLIENT_ID: ${{ secrets.SOURCE_CLIENT_ID }}
+      SOURCE_TENANT_ID: ${{ secrets.SOURCE_TENANT_ID }}
+      SOURCE_CLIENT_SECRET: ${{ secrets.SOURCE_CLIENT_SECRET }}
+      TARGET_CLIENT_ID: ${{ secrets.TARGET_CLIENT_ID }}
+      TARGET_TENANT_ID: ${{ secrets.TARGET_TENANT_ID }}
+      TARGET_CLIENT_SECRET: ${{ secrets.TARGET_CLIENT_SECRET }}
