@@ -16,7 +16,7 @@ jobs:
           Invoke-WebRequest -Uri https://aka.ms/paccli -OutFile pac.msi
           Start-Process msiexec.exe -ArgumentList '/i', 'pac.msi', '/quiet', '/qn', '/norestart' -Wait
           $env:PATH += ";$env:ProgramFiles\Microsoft Power Platform CLI"
-          pac
+          
 
       # Authenticate to SOURCE environment using Entra ID App Registration
       - name: Authenticate SOURCE environment
