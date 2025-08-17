@@ -1,4 +1,4 @@
-name: release-solution-to-prod
+name: Deployment in GesCopilot
 # prepare for releasing to prod:
 #   convert solution to managed (using a build PowerPlatform environment for the conversion)
 #   upload the solution to the GitHub artifacts and deploy to the PROD environment
@@ -11,7 +11,7 @@ on:
         description: 'name of the solution to worked on from Power Platform'
         required: true
         default: ALMLab
-       #Do Not change these values
+      # Do Not change these values
       solution_shipping_folder:
         description: 'folder name for staging the exported solution *do not change*'
         required: true
@@ -21,18 +21,18 @@ on:
         required: true
         default: out/solutions/
       solution_source_folder:
-       description: 'folder name to be created and checked in *do not change*'
-       required: true
-       default: solutions/
+        description: 'folder name to be created and checked in *do not change*'
+        required: true
+        default: solutions/
       solution_release_folder:
-       description: 'folder where the released binaries are going to be hosted *do not change*'
-       required: true
-       default: out/release
+        description: 'folder where the released binaries are going to be hosted *do not change*'
+        required: true
+        default: out/release
   release:
     types: [created]
 
 env:
-#edit your values here
+  # edit your values here
   BUILD_ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
   PRODUCTION_ENVIRONMENT_URL: 'https://operations-gescopilottest.crm.dynamics.com/'
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
@@ -40,6 +40,7 @@ env:
 
 permissions:
   contents: write
+
 jobs:
   convert-to-managed:
     runs-on: windows-latest
@@ -47,46 +48,70 @@ jobs:
       RUNNER_DEBUG: 1
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        lfs: true
-    - name: Install Power Platform Tools
-      uses: microsoft/powerplatform-actions/actions-install@v1
-      
-    - name: Pack solution
-      uses: microsoft/powerplatform-actions/pack-solution@v1
-      with:
-        solution-folder: ${{ github.event.inputs.solution_source_folder}}/${{ github.event.inputs.solution_name }}
-        solution-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
-        solution-type: Unmanaged
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
 
-    - name: Import solution as unmanaged to build env
-      uses: microsoft/powerplatform-actions/import-solution@v1
-      with:
-        environment-url: ${{env.BUILD_ENVIRONMENT_URL}}
-        app-id: ${{env.CLIENT_ID}}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
-        tenant-id: ${{env.TENANT_ID}}
-        solution-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
-        force-overwrite: true
-        publish-changes: true
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
 
-    - name: Export solution as managed
-      uses: microsoft/powerplatform-actions/export-solution@v1
-      with:
-        environment-url: ${{env.BUILD_ENVIRONMENT_URL}}
-        app-id: ${{env.CLIENT_ID}}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
-        tenant-id: ${{env.TENANT_ID}}
-        solution-name: ${{ github.event.inputs.solution_name }}
-        managed: true
-        solution-output-file: ${{ github.event.inputs.solution_shipping_folder}}/${{ github.event.inputs.solution_name }}.zip
+      # 🔹 Export unmanaged solution from source (Dev/Test) environment
+      - name: Export solution as unmanaged
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{env.BUILD_ENVIRONMENT_URL}}
+          app-id: ${{env.CLIENT_ID}}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
+          tenant-id: ${{env.TENANT_ID}}
+          solution-name: ${{ github.event.inputs.solution_name }}
+          managed: false
+          solution-output-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
 
-    - name: Upload the ready to ship solution to GH artifact store
-      uses: actions/upload-artifact@v4
-      with:
-        name: managedSolutions
-        path: ${{ github.event.inputs.solution_shipping_folder}}/${{ github.event.inputs.solution_name }}.zip
+      # 🔹 Unpack the unmanaged solution for source control / validation
+      - name: Unpack solution
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
+          solution-folder: ${{ github.event.inputs.solution_source_folder}}/${{ github.event.inputs.solution_name }}
+          solution-type: Unmanaged
+
+      # 🔹 Pack it again (after potential changes in repo)
+      - name: Pack solution
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: ${{ github.event.inputs.solution_source_folder}}/${{ github.event.inputs.solution_name }}
+          solution-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
+          solution-type: Unmanaged
+
+      # 🔹 Import into BUILD environment (conversion step)
+      - name: Import solution as unmanaged to build env
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{env.BUILD_ENVIRONMENT_URL}}
+          app-id: ${{env.CLIENT_ID}}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
+          tenant-id: ${{env.TENANT_ID}}
+          solution-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
+          force-overwrite: true
+          publish-changes: true
+
+      # 🔹 Export managed solution from BUILD environment
+      - name: Export solution as managed
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{env.BUILD_ENVIRONMENT_URL}}
+          app-id: ${{env.CLIENT_ID}}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
+          tenant-id: ${{env.TENANT_ID}}
+          solution-name: ${{ github.event.inputs.solution_name }}
+          managed: true
+          solution-output-file: ${{ github.event.inputs.solution_shipping_folder}}/${{ github.event.inputs.solution_name }}.zip
+
+      - name: Upload the ready to ship solution to GH artifact store
+        uses: actions/upload-artifact@v4
+        with:
+          name: managedSolutions
+          path: ${{ github.event.inputs.solution_shipping_folder}}/${{ github.event.inputs.solution_name }}.zip
 
   release-to-staging:
     needs: [ convert-to-managed ]
@@ -95,23 +120,23 @@ jobs:
       RUNNER_DEBUG: 1
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        lfs: true
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
 
-    - name: Fetch the ready to ship solution from GH artifact store
-      uses: actions/download-artifact@v5
-      with:
-        name: managedSolutions
-        path: out/release/
+      - name: Fetch the ready to ship solution from GH artifact store
+        uses: actions/download-artifact@v5
+        with:
+          name: managedSolutions
+          path: out/release/
 
-    - name: Import solution to prod env
-      uses: microsoft/powerplatform-actions/import-solution@v0
-      with:
-        environment-url: ${{env.PRODUCTION_ENVIRONMENT_URL}}
-        app-id: ${{env.CLIENT_ID}}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
-        tenant-id: ${{env.TENANT_ID}}
-        solution-file: ${{ github.event.inputs.solution_release_folder}}/${{ github.event.inputs.solution_name }}.zip
-        force-overwrite: true
-        publish-changes: true
+      - name: Import solution to prod env
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{env.PRODUCTION_ENVIRONMENT_URL}}
+          app-id: ${{env.CLIENT_ID}}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
+          tenant-id: ${{env.TENANT_ID}}
+          solution-file: ${{ github.event.inputs.solution_release_folder}}/${{ github.event.inputs.solution_name }}.zip
+          force-overwrite: true
+          publish-changes: true
