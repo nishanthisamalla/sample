@@ -25,9 +25,9 @@ on:
        default: solutions/
 env:
 #edit your values here
-  ENVIRONMENT_URL: '<ENVIRONMENTURL>'
-  CLIENT_ID: '<APPID>'
-  TENANT_ID: '<TENANT ID>'
+  ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
+  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
+  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
 permissions:
   contents: write
 jobs:
