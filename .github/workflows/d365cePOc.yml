@@ -26,9 +26,9 @@ jobs:
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           environment-url: ${{ secrets.ENVIRONMENT_URL }}
-          app-id: ${{ secrets.CLIENT_ID }}
-          client-secret: ${{ secrets.CLIENT_SECRET }}
-          tenant-id: ${{ secrets.TENANT_ID }}
+          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
           solution-name: ${{ github.event.inputs.solution-name }}
           solution-output-file: '${{ github.event.inputs.output-folder }}${{ github.event.inputs.solution-name }}.zip'
           working-directory: ${{ github.event.inputs.output-folder }}
