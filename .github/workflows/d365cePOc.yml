@@ -2,49 +2,111 @@ name: Export and Import Solution
 
 on:
   workflow_dispatch:
+    inputs:
+      environment-url:
+        description: 'URL of Power Platform environment to connect with; e.g. "https://test-env.crm.dynamics.com"'
+        required: true
+      app-id:
+        description: 'The application id to authenticate with. Requires app-id, tenant-id, and client-secret.'
+        required: false
+      client-secret:
+        description: 'The client secret to authenticate with. Required if authenticating with app-id.'
+        required: false
+      tenant-id:
+        description: 'Tenant id if using app-id & client secret to authenticate.'
+        required: false
+      solution-name:
+        description: 'Name of solution to export'
+        required: true
+      solution-version:
+        description: 'DEPRECATED: Version of solution to export (ignored)'
+        required: false
+      solution-output-file:
+        description: 'Path/filename where to place the exported solution zip file.'
+        required: true
+      managed:
+        description: 'Export as managed solution; default is unmanaged.'
+        required: false
+        default: 'false'
+      working-directory:
+        description: 'Working directory; default: root of repository'
+        required: false
+      run-asynchronously:
+        description: 'Exports solution asynchronously'
+        required: false
+        default: 'false'
+      cloud:
+        description: 'Cloud instance to authenticate with. Default: Public.'
+        required: false
+        default: 'Public'
+      max-async-wait-time:
+        description: 'Maximum wait time (minutes) for async export; default is 60.'
+        required: false
+        default: '60'
+      export-auto-numbering-settings:
+        description: 'Export auto numbering settings'
+        required: false
+        default: 'false'
+      export-calendar-settings:
+        description: 'Export calendar settings'
+        required: false
+        default: 'false'
+      export-customization-settings:
+        description: 'Export customization settings'
+        required: false
+        default: 'false'
+      export-email-tracking-settings:
+        description: 'Export email tracking settings'
+        required: false
+        default: 'false'
+      export-external-applications-settings:
+        description: 'Export external applications settings'
+        required: false
+        default: 'false'
+      export-general-settings:
+        description: 'Export general settings'
+        required: false
+        default: 'false'
+      export-isv-config:
+        description: 'Export ISV config'
+        required: false
+        default: 'false'
+      export-marketing-settings:
+        description: 'Export marketing settings'
+        required: false
+        default: 'false'
+      export-outlook-synchronization-settings:
+        description: 'Export Outlook synchronization settings'
+        required: false
+        default: 'false'
+      export-relationship-roles:
+        description: 'Export relationship roles'
+        required: false
+        default: 'false'
+      export-sales:
+        description: 'Export sales settings'
+        required: false
+        default: 'false'
+      overwrite:
+        description: 'Allow overwrite of local solution file if it already exists'
+        required: false
+        default: 'false'
 
 jobs:
   export-import:
     runs-on: windows-latest
-
+    name: 'Export Solution'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Install PAC CLI
-      - name: powerplatform-actions
-        uses: microsoft/powerplatform-actions@v1.9.1
-
-      # Authenticate to Source using Service Principal
-      - name: Auth to Source Environment
-        run: |
-          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" auth create ^
-            --url "https://operations-gesagenttest.crm4.dynamics.com/" ^
-            --tenant "${{ secrets.SOURCE_TENANT_ID }}" ^
-            --applicationId "${{ secrets.SOURCE_CLIENT_ID }}" ^
-            --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
-
-      # Export solution from source
-      - name: Export Solution
-        run: |
-          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" solution export ^
-            --path ./test.zip ^
-            --name "test" ^
-            --managed false ^
-            --overwrite
-
-      # Authenticate to Target using Service Principal
-      - name: Auth to Target Environment
-        run: |
-          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" auth create ^
-            --url "https://TARGET_ENV.crm.dynamics.com" ^
-            --tenant "${{ secrets.TARGET_TENANT_ID }}" ^
-            --applicationId "${{ secrets.TARGET_CLIENT_ID }}" ^
-            --clientSecret "${{ secrets.TARGET_CLIENT_SECRET }}"
-
-      # Import solution to target
-      - name: Import Solution
-        run: |
-          "${{ env.POWERPLATFORMTOOLS_PACPATH }}" solution import ^
-            --path ./aSolution.zip ^
-            --publish-changes true
+      - name: Power Platform Export Solution
+        uses: ./  # assumes this action is in the same repo
+        with:
+          environment-url: ${{ github.event.inputs.environment-url }}
+          app-id: ${{ github.event.inputs.app-id }}
+          client-secret: ${{ github.event.inputs.client-secret }}
+          tenant-id: ${{ github.event.inputs.tenant-id }}
+          solution-name: ${{ github.event.inputs.solution-name }}
+          solution-output-file: ${{ github.event.inputs.solution-output-file }}
+          managed: ${{ github.event.inputs.managed }}
