@@ -42,7 +42,7 @@ permissions:
   contents: write
 
 jobs:
-  Export from Gesagenttest:
+  Export-from-Gesagenttest:
     runs-on: windows-latest
     env:
       RUNNER_DEBUG: 1
@@ -114,7 +114,7 @@ jobs:
           path: ${{ github.event.inputs.solution_shipping_folder}}/${{ github.event.inputs.solution_name }}.zip
 
   gesagentest-gescopilottest:
-    needs: [ convert-to-managed ]
+    needs: [ Export-from-Gesagenttest ]
     runs-on: windows-latest
     env:
       RUNNER_DEBUG: 1
