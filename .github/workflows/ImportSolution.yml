@@ -1,4 +1,5 @@
 name: Deployment in GesCopilot
+
 # prepare for releasing to prod:
 #   convert solution to managed (using a build PowerPlatform environment for the conversion)
 #   upload the solution to the GitHub artifacts and deploy to the PROD environment
@@ -67,7 +68,7 @@ jobs:
           managed: false
           solution-output-file: ${{ github.event.inputs.solution_outbound_folder}}/${{ github.event.inputs.solution_name }}.zip
 
-      # 🔹 Unpack the unmanaged solution for source control / validation
+      # 🔹 Unpack the unmanaged solution
       - name: Unpack solution
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
@@ -75,7 +76,7 @@ jobs:
           solution-folder: ${{ github.event.inputs.solution_source_folder}}/${{ github.event.inputs.solution_name }}
           solution-type: Unmanaged
 
-      # 🔹 Pack it again (after potential changes in repo)
+      # 🔹 Pack it again
       - name: Pack solution
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
@@ -116,6 +117,9 @@ jobs:
   gesagentest-gescopilottest:
     needs: [ Export-from-Gesagenttest ]
     runs-on: windows-latest
+    environment: 
+      name: gescopilottest   # 👈 define environment with approvals in repo settings
+      url: ${{ env.PRODUCTION_ENVIRONMENT_URL }}
     env:
       RUNNER_DEBUG: 1
 
