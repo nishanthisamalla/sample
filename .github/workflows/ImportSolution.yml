@@ -42,7 +42,7 @@ permissions:
   contents: write
 
 jobs:
-  convert-to-managed:
+  Export from Gesagenttest:
     runs-on: windows-latest
     env:
       RUNNER_DEBUG: 1
@@ -113,7 +113,7 @@ jobs:
           name: managedSolutions
           path: ${{ github.event.inputs.solution_shipping_folder}}/${{ github.event.inputs.solution_name }}.zip
 
-  release-to-staging:
+  gesagentest-gescopilottest:
     needs: [ convert-to-managed ]
     runs-on: windows-latest
     env:
@@ -129,8 +129,11 @@ jobs:
         with:
           name: managedSolutions
           path: out/release/
-
-      - name: Import solution to prod env
+          
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        
+      - name: Import solution to GESCopilottest
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
           environment-url: ${{env.PRODUCTION_ENVIRONMENT_URL}}
