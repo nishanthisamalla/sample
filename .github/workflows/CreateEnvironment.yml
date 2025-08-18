@@ -20,7 +20,7 @@ on:
 
 jobs:
   Create-Environments:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     env:
       RUNNER_DEBUG: 1
 
@@ -29,7 +29,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           lfs: true
-      
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        
       - name: Create Test Environment
         uses: microsoft/powerplatform-actions/create-environment@v1
         with:
