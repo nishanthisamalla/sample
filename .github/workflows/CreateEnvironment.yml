@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       env_name:
-        description: name for the environment to be created
+        description: "Name for the environment to be created"
         required: true
         default: environmentname
       
       client_id:
-        description: service principal client id
+        description: "Service principal client id"
         required: true
         default: client_id
       
       user_id:
-        description: AAD object id for the user
+        description: "AAD object id for the user"
         required: true
         default: aad_object_id
 
@@ -25,29 +25,30 @@ jobs:
       RUNNER_DEBUG: 1
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        lfs: true
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          lfs: true
         
-    - name: Install Power Platform Tools
-      uses: microsoft/powerplatform-actions/actions-install@v1
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
       
-    - name: Create Test Environment
-      uses: microsoft/powerplatform-actions/create-environment@v1
-      with:
-        app-id: ${{ secrets.CLIENT_ID }}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-        tenant-id: ${{ secrets.TENANT_ID }}
-        name: ${{ github.event.inputs.env_name }}_Test
-        type: Sandbox
-        domain: ${{ github.event.inputs.env_name }}Test
+      - name: Create Test Environment
+        uses: microsoft/powerplatform-actions/create-environment@v1
+        with:
+          app-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          name: ${{ github.event.inputs.env_name }}_Test
+          type: Sandbox
+          domain: ${{ github.event.inputs.env_name }}Test
 
-    - name: Assign user to test environment
-      uses: microsoft/powerplatform-actions/assign-user@v1
-      with:
-        app-id: ${{ secrets.CLIENT_ID }}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-        tenant-id: ${{ secrets.TENANT_ID }}
-        environment: https://${{ github.event.inputs.env_name }}.crm.dynamics.com
-        user: ${{ github.event.inputs.user_id }}
-        role: System Administrator
+      - name: Assign user to test environment
+        uses: microsoft/powerplatform-actions/assign-user@v1
+        with:
+          app-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          environment: https://${{ github.event.inputs.env_name }}.crm.dynamics.com
+          user: ${{ github.event.inputs.user_id }}
+          role: System Administrator
