@@ -1,0 +1,66 @@
+name: 'create-environment'
+description: 'Power Platform Admin Create Environment'
+
+inputs:
+  app-id:
+    description: 'The application id for authentication.'
+    required: false
+
+  client-secret:
+    description: 'The client secret for authentication.'
+    required: false
+
+  tenant-id:
+    description: 'Tenant id if using app-id & client secret.'
+    required: false
+
+  cloud:
+    description: 'Cloud instance. Default: Public'
+    required: false
+    default: 'Public'
+
+  name:
+    description: 'The name of the environment you are creating.'
+    required: true
+
+  region:
+    description: 'The region for the environment.'
+    required: true
+    default: 'unitedstates'
+
+  type:
+    description: 'Type of environment (Trial, Sandbox, Production, etc.).'
+    required: true
+    default: 'Sandbox'
+
+  currency:
+    description: 'Currency for the environment.'
+    required: false
+    default: 'USD'
+
+  language:
+    description: 'Language for the environment.'
+    required: false
+    default: 'English (United States)'
+
+  templates:
+    description: 'Dynamics 365 apps to deploy (comma separated).'
+    required: false
+
+  domain:
+    description: 'Domain name of the environment URL.'
+    required: false
+
+  team-id:
+    description: 'Microsoft Teams team ID for the environment.'
+    required: false
+
+outputs:
+  environment-url:
+    description: 'URL of the freshly created environment'
+  environment-id:
+    description: 'ID of the freshly created environment'
+
+runs:
+  using: 'node16'
+  main: '../dist/actions/create-environment/index.js'
