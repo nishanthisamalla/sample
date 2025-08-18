@@ -33,9 +33,9 @@ jobs:
       - name: Create Test Environment
         uses: microsoft/powerplatform-actions/create-environment@v1
         with:
-          app-id: ${{ secrets.CLIENT_ID }}
+          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.TENANT_ID }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
           name: ${{ github.event.inputs.env_name }}_Test
           type: Sandbox
           domain: ${{ github.event.inputs.env_name }}Test
@@ -43,9 +43,9 @@ jobs:
       - name: Assign user to test environment
         uses: microsoft/powerplatform-actions/assign-user@v1
         with:
-          app-id: ${{ secrets.CLIENT_ID }}
+          app-id: ${{ secrets.SOURCE_CLIENT_ID  }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.TENANT_ID }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
           environment: https://${{ github.event.inputs.env_name }}.crm.dynamics.com
           user: ${{ github.event.inputs.user_id }}
           role: System Administrator
