@@ -1,4 +1,4 @@
-name: release-screening-solution
+name: CreateEnvironment
 
 on:
   workflow_dispatch:    # allow for manual workflow triggering as needed
