@@ -33,7 +33,7 @@ jobs:
         password-secret: ${{ secrets.PASSWORD_PPDEVTOOLS }}
         app-id: ${{ env.WF_APPID }}
         tenant-id: ${{ env.WF_TENANT_ID }}
-        lient-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
         name: ${{ env.PP_SRC_ENV_NAME }}
         type: Sandbox
         region: unitedstates
