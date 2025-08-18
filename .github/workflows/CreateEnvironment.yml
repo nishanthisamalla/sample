@@ -11,11 +11,11 @@ jobs:
     env:
       RUNNER_DEBUG: 1
       WF_CLOUD: Public
-      WF_USERNAME: davidjen@ppdevtools.onmicrosoft.com
-      # set repo secret with password: PASSWORD_PPDEVTOOLS
-      WF_APPID: 8a7729e0-2b71-4919-a89a-c789d0a9720a
-      WF_TENANT_ID: 3041a058-5110-495a-a575-b2a5571d9eac
-      # set repo secret with appID's client secret: CLIENT_SECRET_PPDEVTOOLS
+      WF_USERNAME: nishanth@avanadeD365.onmicrosoft.com
+      password: PASSWORD_PPDEVTOOLS
+      WF_APPID: 79623805-9f58-4b81-a1aa-81480ca86f44
+      WF_TENANT_ID: 13588042-fe43-45bb-8ce1-83b2e6dd126c
+      client secret: SOURCE_CLIENT_SECRET
 
     steps:
     - uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
         password-secret: ${{ secrets.PASSWORD_PPDEVTOOLS }}
         app-id: ${{ env.WF_APPID }}
         tenant-id: ${{ env.WF_TENANT_ID }}
-        lient-secret: ${{ secrets.CLIENT_SECRET_PPDEVTOOLS }}
+        lient-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
         name: ${{ env.PP_SRC_ENV_NAME }}
         type: Sandbox
         region: unitedstates
