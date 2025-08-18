@@ -7,19 +7,19 @@ on:
         description: "Name for the environment to be created"
         required: true
         default: environmentname
-      
+
       client_id:
         description: "Service principal client id"
         required: true
         default: client_id
-      
+
       user_id:
         description: "AAD object id for the user"
         required: true
         default: aad_object_id
 
 jobs:
-  Create-Environments:
+  create-environments:
     runs-on: windows-latest
     env:
       RUNNER_DEBUG: 1
@@ -29,25 +29,16 @@ jobs:
         uses: actions/checkout@v3
         with:
           lfs: true
+
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1
-        
-      - name: Create Test Environment
-        uses: microsoft/powerplatform-actions/create-environment@v1
-        with:
-          app-id: ${{ secrets.SOURCE_CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
-          name: ${{ github.event.inputs.env_name }}_Test
-          type: Sandbox
-          domain: ${{ github.event.inputs.env_name }}Test
 
-      - name: Assign user to test environment
-        uses: microsoft/powerplatform-actions/assign-user@v1
+      - name: Create Power Platform Environment
+        uses: ./.github/actions/create-environment
         with:
-          app-id: ${{ secrets.SOURCE_CLIENT_ID  }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
-          environment: https://${{ github.event.inputs.env_name }}.crm.dynamics.com
-          user: ${{ github.event.inputs.user_id }}
-          role: System Administrator
+          app-id: ${{ github.event.inputs.client_id }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          name: ${{ github.event.inputs.env_name }}
+          region: unitedstates
+          type: Sandbox
