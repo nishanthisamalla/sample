@@ -1,0 +1,61 @@
+name: Upload & Deploy to LCS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upload-and-deploy:
+    runs-on: windows-latest
+
+    env:
+      LCS_API_URI: ${{ secrets.LCS_API_URI }}   # e.g., https://lcsapi.lcs.dynamics.com
+      LCS_PROJECT_ID: ${{ secrets.LCS_PROJECT_ID }}
+      LCS_CLIENT_ID: ${{ secrets.LCS_CLIENT_ID }}
+      LCS_USERNAME: ${{ secrets.LCS_USERNAME }}
+      LCS_PASSWORD: ${{ secrets.LCS_PASSWORD }}
+      DEPLOYABLE_PACKAGE_PATH: ${{ github.workspace }}/drop/Package.zip
+      FILE_TYPE: 'DeployablePackage'
+      ASSET_NAME: 'MyPackage-${{ github.run_number }}'
+      ASSET_DESC: 'Automated upload via GitHub Actions'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install d365fo.tools PowerShell Module
+        shell: pwsh
+        run: |
+          Install-Module -Name d365fo.tools -Scope CurrentUser -Force
+
+      - name: Authenticate to LCS (setup API token)
+        shell: pwsh
+        run: |
+          $token = Get-D365LcsApiToken `
+            -ClientId $env:LCS_CLIENT_ID `
+            -Username $env:LCS_USERNAME `
+            -Password $env:LCS_PASSWORD `
+            -LcsApiUri $env:LCS_API_URI
+          $null = Set-D365LcsApiConfig -ProjectId $env:LCS_PROJECT_ID -Token $token
+          Get-D365LcsApiConfig
+
+      - name: Upload Package to LCS Asset Library
+        shell: pwsh
+        id: upload
+        run: |
+          $result = Invoke-D365LcsUpload `
+            -ProjectId $env:LCS_PROJECT_ID `
+            -FilePath $env:DEPLOYABLE_PACKAGE_PATH `
+            -FileType $env:FILE_TYPE `
+            -Name $env:ASSET_NAME `
+            -FileDescription $env:ASSET_DESC `
+            -LcsApiUri $env:LCS_API_URI
+          
+          Write-Host "Uploaded Asset ID: $($result.FileAssetId)"
+          echo "assetId=$($result.FileAssetId)" | Out-File -FilePath $GITHUB_OUTPUT -Encoding utf8
+
+      - name: Trigger Deployment in LCS Environment
+        shell: pwsh
+        run: |
+          Write-Host "Deploying asset ID ${{ steps.upload.outputs.assetId }} to target environment..."
+          # Example: Invoke-D365LcsEnvironmentDeploy or related command from d365fo.tools
+          # Invoke-D365LcsEnvironmentDeploy -EnvironmentId <ID> -AssetId ${{ steps.upload.outputs.assetId }} -LcsApiUri $env:LCS_API_URI
