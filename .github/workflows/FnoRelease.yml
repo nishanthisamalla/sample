@@ -47,7 +47,7 @@ jobs:
         uses: microsoft/powerplatform-actions/deploy-package@v1
         with:
           environment-url: ${{ secrets.ENVIRONMENT_URL }}
-          app-id: ${{ env.TARGET_CLIENT_ID }}
+          app-id: ${{ secrets.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
           package-path: "${{ github.workspace }}/TemplatePackage.dll"
