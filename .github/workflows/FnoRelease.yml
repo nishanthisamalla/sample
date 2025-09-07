@@ -20,7 +20,7 @@ jobs:
       - name: Download Package from JFrog Artifactory
         shell: pwsh
         env:
-          JFROG_URL: https://trial5vsdtk.jfrog.io/artifactory/tf-trial/customizations.zip!/TemplatePackage.dll
+          JFROG_URL: https://trial5vsdtk.jfrog.io/artifactory/tf-trial/PackageAssets.zip!/TemplatePackage.dll
           JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
         run: |
           $url    = $env:JFROG_URL
