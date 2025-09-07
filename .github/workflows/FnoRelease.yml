@@ -37,16 +37,16 @@ jobs:
       - name: WhoAmI Action
         uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
-          environment-url: ${{ env.ENVIRONMENT_URL }}
-          app-id: ${{ env.TARGET_CLIENT_ID }}
+          environment-url: ${{ secrets.ENVIRONMENT_URL }}
+          app-id: ${{ secrets.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ env.SOURCE_TENANT_ID }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
 
       # Step 5: Deploy D365 FNO Package
       - name: Deploy D365 FNO Package
         uses: microsoft/powerplatform-actions/deploy-package@v1
         with:
-          environment-url: ${{ secrets.PP_ENVIRONMENT_URL }}
+          environment-url: ${{ secrets.ENVIRONMENT_URL }}
           app-id: ${{ env.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
