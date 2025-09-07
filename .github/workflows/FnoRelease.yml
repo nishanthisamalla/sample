@@ -8,19 +8,19 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # Step 1: Checkout repository
+      # 1) Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Install Power Platform Tools
+      # 2) Install Power Platform Tools
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      # Step 3: Download Package from JFrog Artifactory
+      # 3) Download Package from JFrog (Bearer token)
       - name: Download Package from JFrog Artifactory
         shell: pwsh
         env:
-          JFROG_URL: https://trial5vsdtk.jfrog.io/artifactory/tf-trial/PackageAssets.zip!/PackageAssets/cat_fo_template_1_0_0_1_managed.zip
+          JFROG_URL: https://trial5vsdtk.jfrog.io/artifactory/tf-trial/PackageAssets.zip!/TemplatePackage.dll
           JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
         run: |
           $url    = $env:JFROG_URL
@@ -33,23 +33,25 @@ jobs:
             throw "Download failed or file is empty."
           }
 
-      # Step 4: WhoAmI Action
+      # 4) Connectivity check
       - name: WhoAmI Action
         uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
           environment-url: ${{ secrets.ENVIRONMENT_URL }}
           app-id: ${{ secrets.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
+          tenant-id: ${{ env.SOURCE_TENANT_ID }}
 
-      # Step 5: Deploy D365 FNO Package
-      - name: Deploy D365 FNO Package
+      # 5) Deploy Package Deployer package
+      - name: Deploy Dataverse Package (Package Deployer)
         uses: microsoft/powerplatform-actions/deploy-package@v1
         with:
           environment-url: ${{ secrets.ENVIRONMENT_URL }}
           app-id: ${{ secrets.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
-          package-path: "${{ github.workspace }}/TemplatePackage.dll"
-          wait-for-completion: true
-          max-async-wait-minutes: 60
+          # IMPORTANT: the action expects 'package' (not 'package-path')
+          # You can point to a .zip PD package OR the built package DLL.
+          package: "${{ github.workspace }}/TemplatePackage.dll"
+          # Optional: provide settings JSON if your solutions require env vars/connection refs
+          # settings: "${{ github.workspace }}/settings.json"
