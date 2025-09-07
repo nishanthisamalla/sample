@@ -1,0 +1,70 @@
+name: Power Platform Deploy Package
+ 
+on:
+
+  workflow_dispatch: # Manual trigger
+ 
+jobs:
+
+  deploy:
+
+    runs-on: windows-latest
+ 
+    steps:
+
+      - name: Checkout repository
+
+        uses: actions/checkout@v4
+ 
+      - name: Install Power Platform Tools
+
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+ 
+      - name: Download Package from JFrog Artifactory
+
+        run: |
+
+          $url = "https://<your-artifactory-domain>/artifactory/<repo-path>/TemplatePackage.dll"
+
+          $output = "${{ github.workspace }}\\TemplatePackage.dll"
+
+          Invoke-WebRequest -Uri $url -OutFile $output -Headers @{
+
+            Authorization = "Basic ${{ secrets.JFROG_AUTH }}"
+
+          }
+ 
+      - name: WhoAmI Action
+
+        uses: microsoft/powerplatform-actions/who-am-i@v1
+
+        with:
+
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+
+          app-id: ${{ env.CLIENT_ID }}
+
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+
+          tenant-id: ${{ env.TENANT_ID }}
+ 
+      - name: Deploy D365 FNO Package
+
+        uses: microsoft/powerplatform-actions/deploy-package@v1
+
+        with:
+
+          environment-url: ${{ secrets.PP_ENVIRONMENT_URL }}
+
+          app-id: ${{ secrets.PP_APP_ID }}
+
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+
+          package-path: "${{ github.workspace }}/TemplatePackage.dll"
+
+          wait-for-completion: true
+
+          max-async-wait-minutes: 60
+ 
