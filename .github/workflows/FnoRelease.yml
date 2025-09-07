@@ -24,7 +24,7 @@ jobs:
 
         run: |
 
-          $url = "https://<your-artifactory-domain>/artifactory/<repo-path>/TemplatePackage.dll"
+          $url = "https://trial5vsdtk.jfrog.io/artifactory/tf-trial/TemplatePackage.dll"
 
           $output = "${{ github.workspace }}\\TemplatePackage.dll"
 
