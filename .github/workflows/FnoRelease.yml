@@ -40,7 +40,7 @@ jobs:
           environment-url: ${{ secrets.ENVIRONMENT_URL }}
           app-id: ${{ secrets.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ env.SOURCE_TENANT_ID }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
 
       # 5) Deploy Package Deployer package
       - name: Deploy Dataverse Package (Package Deployer)
