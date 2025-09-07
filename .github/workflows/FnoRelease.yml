@@ -8,12 +8,15 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Step 2: Install Power Platform Tools
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
+      # Step 3: Download Package from JFrog Artifactory
       - name: Download Package from JFrog Artifactory
         shell: pwsh
         env:
@@ -30,19 +33,21 @@ jobs:
             throw "Download failed or file is empty."
           }
 
+      # Step 4: WhoAmI Action
       - name: WhoAmI Action
         uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
           environment-url: ${{ env.ENVIRONMENT_URL }}
-          app-id: ${{ TARGET_CLIENT_ID }}
+          app-id: ${{ env.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.SOURCE_TENANT_ID }}
 
+      # Step 5: Deploy D365 FNO Package
       - name: Deploy D365 FNO Package
         uses: microsoft/powerplatform-actions/deploy-package@v1
         with:
           environment-url: ${{ secrets.PP_ENVIRONMENT_URL }}
-          app-id: ${{ TARGET_CLIENT_ID }}
+          app-id: ${{ env.TARGET_CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
           package-path: "${{ github.workspace }}/TemplatePackage.dll"
