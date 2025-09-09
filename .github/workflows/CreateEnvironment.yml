@@ -12,21 +12,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
+
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
-
 
       - name: Create Power Platform Environment
         uses: microsoft/powerplatform-actions/create-environment@v1
         with:
-          environment-name: 'MyNewEnvironment'
-          environment-type: 'Sandbox'        # e.g., Sandbox, Production
-          region: 'North America'            # change as needed
-          admin-username: ${{ secrets.PP_ADMIN_USERNAME }}
-          admin-password: ${{ secrets.PP_ADMIN_PASSWORD }}
-          location: 'avanadeD365.onmicrosoft.com'  # e.g., tenant or org domain
-          display-name: 'Github'
-          purpose: 'Development testing'
-          # Optional: additional inputs if supported by the action
+          # --- Authentication (Service Principal) ---
+          app-id: ${{ secrets.PP_APP_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
 
+          # --- Environment Properties ---
+          name: 'GitTest'          # environment unique name
+          type: 'Sandbox'                   # Sandbox | Production | Trial
+          region: 'northamerica'            # e.g., northamerica, europe, unitedkingdom
+          domain: 'avanaded365.onmicrosoft.com'           # must be unique subdomain
+          user: ${{ secrets.PP_USER_NAME }} # owner (UPN) of environment
+
+          # Optional properties
+          currency: 'USD'
+          language: '1033'                  # English
+          # templates: 'CDS'
+          # team-id: '<AzureAD-Team-GUID>'
+          # security-group-id: '<AAD-SecurityGroup-GUID>'
