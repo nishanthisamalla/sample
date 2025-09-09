@@ -1,40 +1,28 @@
-name: CreateEnvironment
+name: Create Power Platform Environment
 
 on:
-  workflow_dispatch:    # allow for manual workflow triggering as needed
-  release:
-    types: [created]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  convert-to-managed:
-    runs-on: ubuntu-latest
-    env:
-      RUNNER_DEBUG: 1
-      WF_CLOUD: Public
-      WF_USERNAME: nishanth@avanadeD365.onmicrosoft.com
-      password: PASSWORD_PPDEVTOOLS
-      WF_APPID: 79623805-9f58-4b81-a1aa-81480ca86f44
-      WF_TENANT_ID: 13588042-fe43-45bb-8ce1-83b2e6dd126c
-      client secret: SOURCE_CLIENT_SECRET
-
+  create-env:
+    runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        lfs: true
-        
-    - name: create ephemeral test environment
-      uses: microsoft/powerplatform-actions/create-environment@v1
-      id: test-environment
-      env:
-        PP_SRC_ENV_NAME: ${{ format('dj-rel-{0}', runner.os) }}
-      with:
-        cloud: ${{ env.WF_CLOUD }}
-        user-name: ${{ env.WF_USERNAME }}
-        password-secret: ${{ secrets.PASSWORD_PPDEVTOOLS }}
-        app-id: ${{ env.WF_APPID }}
-        tenant-id: ${{ env.WF_TENANT_ID }}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-        name: ${{ env.PP_SRC_ENV_NAME }}
-        type: Sandbox
-        region: unitedstates
-        domain: ${{ env.PP_SRC_ENV_NAME }}
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create Power Platform Environment
+        uses: microsoft/powerplatform-actions/create-environment@v1
+        with:
+          environment-name: 'MyNewEnvironment'
+          environment-type: 'Sandbox'        # e.g., Sandbox, Production
+          region: 'North America'            # change as needed
+          admin-username: ${{ secrets.PP_ADMIN_USERNAME }}
+          admin-password: ${{ secrets.PP_ADMIN_PASSWORD }}
+          location: 'YourOrgName.onmicrosoft.com'  # e.g., tenant or org domain
+          display-name: 'My New PP Environment'
+          purpose: 'Development testing'
+          # Optional: additional inputs if supported by the action
+
