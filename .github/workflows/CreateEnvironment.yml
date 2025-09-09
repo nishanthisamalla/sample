@@ -29,7 +29,7 @@ jobs:
           type: 'Sandbox'                   # Sandbox | Production | Trial
           region: 'northamerica'            # e.g., northamerica, europe, unitedkingdom
           domain: 'avanaded365test01'           # must be unique subdomain
-          user: ${{ secrets.PP_ADMIN_USERNAME }} # owner (UPN) of environment
+          #user: ${{ secrets.PP_ADMIN_USERNAME }} # owner (UPN) of environment
 
           # Optional properties
           currency: 'USD'
