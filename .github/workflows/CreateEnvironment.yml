@@ -20,9 +20,9 @@ jobs:
         uses: microsoft/powerplatform-actions/create-environment@v1
         with:
           # --- Authentication (Service Principal) ---
-          app-id: 5d24666c-1453-4140-bed7-54d579b25ad7
-          #client-secret: ${{ secrets.PP_CLIENT_SECRET }}
-          tenant-id: 6fad243e-c43c-4f8e-a920-1d0f77023908
+          app-id: ${{ secrets.PP_APP_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{secrets.SOURCE_TENANT_ID}}
 
           # --- Environment Properties ---
           name: GitTest                 # Unique environment name
