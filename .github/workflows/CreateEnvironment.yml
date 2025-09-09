@@ -22,14 +22,14 @@ jobs:
           # --- Authentication (Service Principal) ---
           app-id: ${{ secrets.PP_APP_ID }}
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
 
           # --- Environment Properties ---
           name: 'GitTest'          # environment unique name
           type: 'Sandbox'                   # Sandbox | Production | Trial
           region: 'northamerica'            # e.g., northamerica, europe, unitedkingdom
           domain: 'avanaded365.onmicrosoft.com'           # must be unique subdomain
-          user: ${{ secrets.PP_USER_NAME }} # owner (UPN) of environment
+          user: ${{ secrets.PP_ADMIN_USERNAME }} # owner (UPN) of environment
 
           # Optional properties
           currency: 'USD'
