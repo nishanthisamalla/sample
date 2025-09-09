@@ -20,20 +20,20 @@ jobs:
         uses: microsoft/powerplatform-actions/create-environment@v1
         with:
           # --- Authentication (Service Principal) ---
-          app-id: ${{ secrets.PP_APP_ID }}
-          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.SOURCE_TENANT_ID }}
+          app-id: 5d24666c-1453-4140-bed7-54d579b25ad7
+          #client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: 6fad243e-c43c-4f8e-a920-1d0f77023908
 
           # --- Environment Properties ---
-          name: 'GitTest'          # environment unique name
-          type: 'Sandbox'                   # Sandbox | Production | Trial
-          region: 'northamerica'            # e.g., northamerica, europe, unitedkingdom
-          domain: 'avanaded365test01'           # must be unique subdomain
-          #user: ${{ secrets.PP_ADMIN_USERNAME }} # owner (UPN) of environment
+          name: GitTest                 # Unique environment name
+          type: Sandbox                 # Options: Sandbox | Production | Trial
+          region: northamerica          # e.g., northamerica, europe, unitedkingdom
+          domain: gittest               # Must be a unique subdomain
 
-          # Optional properties
-          currency: 'USD'
-          language: '1033'                  # English
-          # templates: 'CDS'
-          # team-id: '<AzureAD-Team-GUID>'
-          # security-group-id: '<AAD-SecurityGroup-GUID>'
+          # --- Optional Properties ---
+          currency: USD
+          language: 1033                # English
+          # templates: CDS
+          # user: ${{ secrets.PP_ADMIN_USERNAME }} # Optional: Owner (UPN) of environment
+          # team-id: <AzureAD-Team-GUID>
+          # security-group-id: <AAD-SecurityGroup-GUID>
