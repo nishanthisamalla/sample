@@ -25,7 +25,7 @@ jobs:
           region: 'North America'            # change as needed
           admin-username: ${{ secrets.PP_ADMIN_USERNAME }}
           admin-password: ${{ secrets.PP_ADMIN_PASSWORD }}
-          location: 'YourOrgName.onmicrosoft.com'  # e.g., tenant or org domain
+          location: 'avanadeD365.onmicrosoft.com'  # e.g., tenant or org domain
           display-name: 'Github'
           purpose: 'Development testing'
           # Optional: additional inputs if supported by the action
