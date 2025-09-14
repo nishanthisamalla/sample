@@ -94,7 +94,7 @@ jobs:
       uses: microsoft/powerplatform-actions/update-solution-version@v1
       with:
        strategy: Solution
-       solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
+       solution-folder: solutions/test/Other/Solution.xml
 
         
 
