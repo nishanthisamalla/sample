@@ -94,12 +94,17 @@ jobs:
       uses: microsoft/powerplatform-actions/update-solution-version@v1
       with:
         strategy: Solution
-        solution-folder: D:\a\sample\sample\out\solutions\test\Other\Solution.xml
-        
-    - name: branch-solution, prepare it for a PullRequest
-      uses: microsoft/powerplatform-actions/branch-solution@v1
-      with:
         solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
-        solution-target-folder: ${{ github.event.inputs.solution_target_folder}}/${{ github.event.inputs.solution_name }}
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        allow-empty-commit: true
+        
+
+    # Commit & push directly to master
+    - name: Commit and push to master
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        mkdir -p ${{ github.event.inputs.solution_target_folder }}
+        cp -r ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder}}/
+        git add ${{ github.event.inputs.solution_target_folder}}/${{ github.event.inputs.solution_name }}
+        git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }}"
+        git push origin master
+      shell: bash
