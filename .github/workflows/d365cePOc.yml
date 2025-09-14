@@ -71,6 +71,14 @@ jobs:
         solution-type: 'Unmanaged'
         overwrite-files: true
         
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v4
+      with:
+          dotnet-version: '9.x'
+ 
+    - name: Install Power Platform CLI
+      run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+       
     - name: Increment Solution Version
       run: |
         echo "Incrementing version for ${{ github.event.inputs.solution_name }}"
