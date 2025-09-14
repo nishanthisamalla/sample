@@ -94,7 +94,7 @@ jobs:
       uses: microsoft/powerplatform-actions/update-solution-version@v1
       with:
         strategy: Solution
-
+        solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
         
     - name: branch-solution, prepare it for a PullRequest
       uses: microsoft/powerplatform-actions/branch-solution@v1
