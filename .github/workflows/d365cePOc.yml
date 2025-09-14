@@ -89,12 +89,15 @@ jobs:
      # shell: pwsh
 
          # ✅ Increment solution version using marketplace action
+    # ✅ Update solution version using correct inputs
     - name: update-solution-version
       uses: microsoft/powerplatform-actions/update-solution-version@v1
       with:
-        solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
-        solution-name: ${{ github.event.inputs.solution_name }}
-        increment: ${{ github.event.inputs.version_increment }}
+        strategy: Solution
+        revision-version: +1
+        # Optional: if you want to control path explicitly
+        # tracker-file: ControlsStateVersionInfo.csv
+
         
     - name: branch-solution, prepare it for a PullRequest
       uses: microsoft/powerplatform-actions/branch-solution@v1
