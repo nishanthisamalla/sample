@@ -70,7 +70,16 @@ jobs:
         solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
         solution-type: 'Unmanaged'
         overwrite-files: true
-
+        
+    - name: Increment Solution Version
+      run: |
+        echo "Incrementing version for ${{ github.event.inputs.solution_name }}"
+        pac solution version `
+          --solution-name ${{ github.event.inputs.solution_name }} `
+          --solution-folder ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }} `
+          --increment revision
+      shell: pwsh
+      
     - name: branch-solution, prepare it for a PullRequest
       uses: microsoft/powerplatform-actions/branch-solution@v1
       with:
