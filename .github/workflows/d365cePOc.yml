@@ -71,22 +71,31 @@ jobs:
         solution-type: 'Unmanaged'
         overwrite-files: true
         
-    - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
-      with:
-          dotnet-version: '9.x'
+    #- name: Setup dotnet
+     # uses: actions/setup-dotnet@v4
+    #  with:
+       #   dotnet-version: '9.x'
  
-    - name: Install Power Platform CLI
-      run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+   # - name: Install Power Platform CLI
+  #    run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
        
-    - name: Increment Solution Version
-      run: |
-        echo "Incrementing version for ${{ github.event.inputs.solution_name }}"
-        pac solution version `
-          --solution-name ${{ github.event.inputs.solution_name }} `
-          --solution-folder ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }} `
-          --increment revision
-      shell: pwsh
+    #- name: Increment Solution Version
+    #  run: |
+     #   echo "Incrementing version for ${{ github.event.inputs.solution_name }}"
+#        pac solution version `
+    #      --solution-name ${{ github.event.inputs.solution_name }} `
+     #     --solution-folder ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }} `
+      #    --increment revision
+     # shell: pwsh
+
+         # ✅ Increment solution version using marketplace action
+    - name: version-solution action
+      uses: microsoft/powerplatform-actions/version-solution@v1
+      with:
+        solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
+        solution-name: ${{ github.event.inputs.solution_name }}
+        # Options: Major | Minor | Build | Revision
+        versioning-strategy: Revision
       
     - name: branch-solution, prepare it for a PullRequest
       uses: microsoft/powerplatform-actions/branch-solution@v1
