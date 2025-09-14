@@ -90,11 +90,11 @@ jobs:
 
          # ✅ Increment solution version using marketplace action
     # ✅ Update solution version using correct inputs
-   # - name: update-solution-version
-     # uses: microsoft/powerplatform-actions/update-solution-version@v1
-     # with:
-     #  strategy: Solution
-      # solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
+    - name: update-solution-version
+      uses: microsoft/powerplatform-actions/update-solution-version@v1
+      with:
+       strategy: Solution
+       solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
 
         
 
