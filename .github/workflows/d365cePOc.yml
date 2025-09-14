@@ -63,13 +63,19 @@ jobs:
         solution-name: ${{ github.event.inputs.solution_name }}
         solution-output-file: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
 
-    - name: unpack-solution action
+    - name: Unpack Solution
       uses: microsoft/powerplatform-actions/unpack-solution@v1
       with:
-        solution-file: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
-        solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
-        solution-type: 'Unmanaged'
-        overwrite-files: true
+          solution-file: out/MySolution.zip
+          solution-folder: solutions/MySolution
+          overwrite-files: true
+
+      # 🔑 Increment version (point to unpacked folder!)
+    - name: Update Solution Version
+      uses: microsoft/powerplatform-actions/update-solution-version@v1
+      with:
+          solution-folder: solutions/MySolution
+          strategy: Revision  # auto-increment revision number
         
     #- name: Setup dotnet
      # uses: actions/setup-dotnet@v4
