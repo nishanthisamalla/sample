@@ -43,7 +43,7 @@ jobs:
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: solutions/MySolution
-          strategy: Revision  # auto-increment revision number
+          revisionversion: +1   # auto-increment revision only  # auto-increment revision number
 
       # Commit changes back to master branch
       - name: Commit updated solution
