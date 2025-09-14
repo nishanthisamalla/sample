@@ -1,0 +1,51 @@
+name: Export and Version Solutions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: master   # store in master branch
+
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Export the solution
+      - name: Export Solution
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{ secrets.ENV_URL }}
+          app-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          solution-name: MySolution
+          solution-output-file: out/MySolution.zip
+
+      # Unpack solution
+      - name: Unpack Solution
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: out/MySolution.zip
+          solution-folder: solutions/MySolution
+          overwrite-files: true
+
+      # 🔑 Increment version (point to unpacked folder!)
+      - name: Update Solution Version
+        uses: microsoft/powerplatform-actions/update-solution-version@v1
+        with:
+          solution-folder: solutions/MySolution
+          strategy: Revision  # auto-increment revision number
+
+      # Commit changes back to master branch
+      - name: Commit updated solution
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add solutions/MySolution
+          git commit -m "Updated MySolution version [skip ci]" || echo "No changes to commit"
+          git push origin master
