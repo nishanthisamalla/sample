@@ -2,7 +2,11 @@ name: Export and Version Solutions
 
 on:
   workflow_dispatch:
-
+env:
+#edit your values here
+  ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
+  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
+  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
 jobs:
   export:
     runs-on: windows-latest
@@ -19,18 +23,18 @@ jobs:
       - name: Export Solution
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
-          environment-url: ${{ secrets.ENV_URL }}
-          app-id: ${{ secrets.CLIENT_ID }}
-          client-secret: ${{ secrets.CLIENT_SECRET }}
-          tenant-id: ${{ secrets.TENANT_ID }}
-          solution-name: MySolution
-          solution-output-file: out/MySolution.zip
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+          solution-name: test
+          solution-output-file: out/test.zip
 
       # Unpack solution
       - name: Unpack Solution
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
-          solution-file: out/MySolution.zip
+          solution-file: out/test.zip
           solution-folder: solutions/MySolution
           overwrite-files: true
 
