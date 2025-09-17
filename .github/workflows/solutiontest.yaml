@@ -45,9 +45,6 @@ jobs:
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: solutions/MySolution
-          majorVersion: 1
-          minorVersion: 0
-          buildVersion: 0
           revisionVersion: +1   # increments revision automatically
 
       # Commit changes back to master branch
