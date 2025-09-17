@@ -2,11 +2,13 @@ name: Export and Version Solutions
 
 on:
   workflow_dispatch:
+
 env:
-#edit your values here
+  # edit your values here
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
   TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
+
 jobs:
   export:
     runs-on: windows-latest
@@ -38,12 +40,15 @@ jobs:
           solution-folder: solutions/MySolution
           overwrite-files: true
 
-      # 🔑 Increment version (point to unpacked folder!)
-      - name: Update Solution Version
+      # 🔑 Auto-increment solution version
+      - name: Auto Increment Solution Version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: solutions/MySolution
-          revisionVersion: "+1"   # auto-increment revision only  # auto-increment revision number
+          majorVersion: 1
+          minorVersion: 0
+          buildVersion: 0
+          revisionVersion: +1   # increments revision automatically
 
       # Commit changes back to master branch
       - name: Commit updated solution
