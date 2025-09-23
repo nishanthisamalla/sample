@@ -1,10 +1,10 @@
 name: Export and Version Solutions
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # Manual trigger
 
 env:
-  # edit your values here
+  # 🔧 Configure your environment details
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
   TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
@@ -13,11 +13,14 @@ jobs:
   export:
     runs-on: windows-latest
     steps:
+      # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: master   # store in master branch
+          fetch-depth: 0   # needed for pushing back changes
+          ref: master
 
+      # Install Power Platform CLI tools
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1
 
@@ -32,7 +35,7 @@ jobs:
           solution-name: test
           solution-output-file: out/test.zip
 
-      # Unpack solution
+      # Unpack exported solution
       - name: Unpack Solution
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
@@ -40,18 +43,18 @@ jobs:
           solution-folder: solutions/MySolution
           overwrite-files: true
 
-      # 🔑 Auto-increment solution version
+      # Auto-increment solution version
       - name: Auto Increment Solution Version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: solutions/MySolution
-          revisionVersion: +1   # increments revision automatically
+          revisionVersion: +1
 
-      # Commit changes back to master branch
+      # Commit & push updated solution
       - name: Commit updated solution
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add solutions/MySolution
-          git commit -m "Updated MySolution version [skip ci]" || echo "No changes to commit"
+          git commit -m "🚀 Updated MySolution version [skip ci]" || echo "No changes to commit"
           git push origin master
