@@ -40,7 +40,7 @@ jobs:
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
           solution-file: out/test.zip
-          solution-folder: solutions/MySolution
+          solution-folder: solutions/test
           overwrite-files: true
 
       # Auto-increment solution version
