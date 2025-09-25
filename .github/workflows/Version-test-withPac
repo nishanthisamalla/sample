@@ -1,0 +1,71 @@
+name: Test Solution Version 
+
+on:
+  workflow_dispatch:
+env:
+#edit your values here
+  ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
+  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
+  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
+  
+permissions:
+  contents: write
+jobs:
+  set-solution-version:
+    runs-on: windows-latest
+    steps:
+      # 1. Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Setup .NET
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+ 
+      # 3. Install Power Platform CLI
+      - name: Install Power Platform CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      # 4. Authenticate to Dataverse
+      - name: Authenticate with PAC CLI
+        run: |
+          pac auth create --url ${{env.ENVIRONMENT_URL}} `
+            --tenant ${{env.TENANT_ID}} `
+            --applicationId ${{env.CLIENT_ID}} `
+            --clientSecret ${{ secrets.SOURCE_CLIENT_SECRET }}
+
+      # 5. Export solution from Dataverse
+      - name: Export Solution
+        run: |
+          pac solution export `
+            --name test `
+            --path exported_solutions `
+            --managed false `
+            --overwrite
+
+      # 6. Unpack solution
+      - name: Unpack Solution
+        run: |
+          pac solution unpack `
+            --zipfile exported_solutions\test.zip `
+            --folder solutions\MySolution `
+            --packagetype Unmanaged
+
+      # 7. Update Solution Version
+      - name: Update Solution Version
+        run: |
+          pac solution version update `
+            --path solutions\MySolution `
+            --solution-name MySolutionName `
+            --solution-version 1.2.0.0
+
+      # 8. Commit changes back to GitHub (optional but recommended)
+      - name: Commit & Push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add solutions/MySolution/*
+          git commit -m "Updated solution version to 1.2.0.0"
+          git push
