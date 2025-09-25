@@ -26,7 +26,9 @@ jobs:
  
       # 3. Install Power Platform CLI
       - name: Install Power Platform CLI
-        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+        run: |
+           iex "& { $(irm https://aka.ms/install-pac-cli.ps1) }"
+
 
 
       # 4. Authenticate to Dataverse
