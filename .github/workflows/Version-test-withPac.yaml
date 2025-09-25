@@ -27,7 +27,7 @@ jobs:
       # 3. Install Power Platform CLI
       - name: Install Power Platform CLI
         run: |
-           iex "& { $(irm https://aka.ms/install-pac-cli.ps1) }"
+           dotnet tool install Microsoft.PowerApps.CLI.Tool --add-source https://api.nuget.org/v3/index.json
 
 
 
