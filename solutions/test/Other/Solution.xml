@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ImportExportXml version="9.2.25082.158" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.25082.158" OrganizationSchemaType="Full" CRMServerServiceabilityVersion="9.2.25083.00168">
+<ImportExportXml version="9.2.25082.158" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.25082.158" OrganizationSchemaType="Full" CRMServerServiceabilityVersion="9.2.25084.00176">
   <SolutionManifest>
     <UniqueName>test</UniqueName>
     <LocalizedNames>
       <LocalizedName description="test" languagecode="1033" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.0.2</Version>
+    <Version>1.0.0.3</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>Cr70c50</UniqueName>
@@ -89,13 +89,13 @@
       </MissingDependency>
       <MissingDependency>
         <Required type="2" schemaName="originatingleadid" displayName="Originating Lead" parentSchemaName="account" parentDisplayName="Account" solution="msdynce_LeadManagement (9.0.4.0066)">
-          <package appName="msdynce_LeadManagement" version="9.0.25083.10001">msdynce_LeadManagementAnchor (9.0.25083.10001)</package>
+          <package appName="msdynce_LeadManagement" version="9.0.25084.10001">msdynce_LeadManagementAnchor (9.0.25084.10001)</package>
         </Required>
         <Dependent type="60" displayName="Information" parentDisplayName="Account" id="{b053a39a-041a-4356-acef-ddf00182762b}" />
       </MissingDependency>
       <MissingDependency>
         <Required type="2" schemaName="territoryid" displayName="Territory" parentSchemaName="account" parentDisplayName="Account" solution="msdynce_Sales (9.0.4.0076)">
-          <package appName="msdynce_Sales" version="9.0.25082.10003">msdynce_SalesAnchor (9.0.25082.10003)</package>
+          <package appName="msdynce_Sales" version="9.0.25084.10011">msdynce_SalesAnchor (9.0.25084.10011)</package>
         </Required>
         <Dependent type="60" displayName="Information" parentDisplayName="Account" id="{b053a39a-041a-4356-acef-ddf00182762b}" />
       </MissingDependency>
