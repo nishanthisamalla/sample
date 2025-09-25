@@ -28,6 +28,7 @@ jobs:
       - name: Install Power Platform CLI
         run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
+
       # 4. Authenticate to Dataverse
       - name: Authenticate with PAC CLI
         run: |
