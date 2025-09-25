@@ -1,4 +1,4 @@
-name: export-and-branch-solution
+name: export-test
 # Export solution from DEV environment
 #  unpack it and prepare, commit and push a git branch with the changes
 
@@ -63,19 +63,13 @@ jobs:
         solution-name: ${{ github.event.inputs.solution_name }}
         solution-output-file: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
 
-    - name: Unpack Solution
+    - name: unpack-solution action
       uses: microsoft/powerplatform-actions/unpack-solution@v1
       with:
-          solution-file: out/MySolution.zip
-          solution-folder: solutions/MySolution
-          overwrite-files: true
-
-      # 🔑 Increment version (point to unpacked folder!)
-    - name: Update Solution Version
-      uses: microsoft/powerplatform-actions/update-solution-version@v1
-      with:
-          solution-folder: solutions/MySolution
-          strategy: Revision  # auto-increment revision number
+        solution-file: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
+        solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
+        solution-type: 'Unmanaged'
+        overwrite-files: true
         
     #- name: Setup dotnet
      # uses: actions/setup-dotnet@v4
@@ -96,11 +90,11 @@ jobs:
 
          # ✅ Increment solution version using marketplace action
     # ✅ Update solution version using correct inputs
-    - name: update-solution-version
-      uses: microsoft/powerplatform-actions/update-solution-version@v1
-      with:
-       strategy: Solution
-       solution-folder: solutions/test/Other/Solution.xml
+   # - name: update-solution-version
+     # uses: microsoft/powerplatform-actions/update-solution-version@v1
+     # with:
+     #  strategy: Solution
+      # solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
 
         
 
