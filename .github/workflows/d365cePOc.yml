@@ -77,7 +77,7 @@ jobs:
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
           solution-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}.zip
-          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}/test
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
           solution-type: 'Unmanaged'
           overwrite-files: true
           
@@ -91,7 +91,7 @@ jobs:
       - name: update-solution-version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
-          solution-folder: solutions/test/Other/Solution.xml
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}/Other
           revision-version: +1
 
 
