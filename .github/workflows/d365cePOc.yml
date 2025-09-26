@@ -81,12 +81,13 @@ jobs:
           solution-type: 'Unmanaged'
           overwrite-files: true
 
-      # 6. Update solution version (increment revision)
+            # 6. Update solution version
       - name: update-solution-version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
           revisionVersion: +1
+
 
       # 7. Publish solution
       - name: Publish Solution
