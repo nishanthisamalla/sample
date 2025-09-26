@@ -86,7 +86,7 @@ jobs:
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
-          revisionVersion: +1
+          revision-version: +1
 
 
       # 7. Publish solution
