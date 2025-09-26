@@ -72,6 +72,9 @@ jobs:
         solution-type: 'Unmanaged'
         overwrite-files: true
         
+    - name: List solution folder
+  run: dir ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
+    
     #- name: Setup dotnet
      # uses: actions/setup-dotnet@v4
     #  with:
