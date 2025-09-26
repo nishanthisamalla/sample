@@ -99,7 +99,7 @@ jobs:
     - name: Auto Increment Solution Version
       uses: microsoft/powerplatform-actions/update-solution-version@v1
       with:
-          solution-folder: solutions/test
+          solution-folder: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
           revisionVersion: +1    
 
     # Commit & push directly to master
