@@ -1,15 +1,17 @@
-name: Test Solution Version 
+name: Test Solution Version
 
 on:
   workflow_dispatch:
+
 env:
-#edit your values here
+  # Edit your values here
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
   TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
   
 permissions:
   contents: write
+
 jobs:
   set-solution-version:
     runs-on: windows-latest
@@ -27,16 +29,14 @@ jobs:
       # 3. Install Power Platform CLI
       - name: Install Power Platform CLI
         run: |
-           dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-
-
+          dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
       # 4. Authenticate to Dataverse
       - name: Authenticate with PAC CLI
         run: |
-          pac auth create --url ${{env.ENVIRONMENT_URL}} `
-            --tenant ${{env.TENANT_ID}} `
-            --applicationId ${{env.CLIENT_ID}} `
+          pac auth create --url ${{ env.ENVIRONMENT_URL }} `
+            --tenant ${{ env.TENANT_ID }} `
+            --applicationId ${{ env.CLIENT_ID }} `
             --clientSecret ${{ secrets.SOURCE_CLIENT_SECRET }}
 
       # 5. Export solution from Dataverse
