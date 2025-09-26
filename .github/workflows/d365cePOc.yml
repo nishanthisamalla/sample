@@ -77,11 +77,14 @@ jobs:
         uses: microsoft/powerplatform-actions/unpack-solution@v1
         with:
           solution-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}.zip
-          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}/test
           solution-type: 'Unmanaged'
           overwrite-files: true
           
       - name: List solution folder
+        run: dir ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
+
+      - name: Verify Solution.xml
         run: dir ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
 
             # 6. Update solution version
