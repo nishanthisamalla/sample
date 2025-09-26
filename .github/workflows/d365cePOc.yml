@@ -92,7 +92,6 @@ jobs:
       - name: update-solution-version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
-          solution-folder: ${{ env.SOLUTION_PATH }}
           revision-version: +1
 
 
