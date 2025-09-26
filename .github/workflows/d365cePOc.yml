@@ -1,35 +1,41 @@
 name: export-test
 # Export solution from DEV environment
-#  unpack it and prepare, commit and push a git branch with the changes
+# Unpack it and prepare, commit and push a git branch with the changes
 
 on:
   workflow_dispatch:
     inputs:
       # Change this value
       solution_name:
-        description: 'name of the solution to worked on from Power Platform'
+        description: 'Name of the solution to work on from Power Platform'
         required: true
         default: ALMLab
-       #Do Not change these values
+
+      # Do Not change these values
       solution_exported_folder:
-        description: 'folder name for staging the exported solution *do not change*'
+        description: 'Folder name for staging the exported solution *do not change*'
         required: true
         default: out/exported/
+
       solution_folder:
-        description: 'staging the unpacked solution folder before check-in *do not change*'
+        description: 'Staging folder for the unpacked solution before check-in *do not change*'
         required: true
         default: out/solutions/
+
       solution_target_folder: 
-       description: 'folder name to be created and checked in *do not change*'
-       required: true
-       default: solutions/
+        description: 'Folder name to be created and checked in *do not change*'
+        required: true
+        default: solutions/
+
 env:
-#edit your values here
+  # Edit your values here
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
   TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
+
 permissions:
   contents: write
+
 jobs:
   export-from-dev:
     runs-on: windows-latest
@@ -38,74 +44,67 @@ jobs:
       RUNNER_DEBUG: 1
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-        lfs: true
-    - name: Install Power Platform Tools
-      uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+      # 1. Checkout repo
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
+
+      # 2. Install Power Platform Tools
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
       
-    - name: who-am-i action
-      uses: microsoft/powerplatform-actions/who-am-i@v1
-      with:
-        environment-url: ${{env.ENVIRONMENT_URL}}
-        app-id: ${{env.CLIENT_ID}}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-        tenant-id: ${{env.TENANT_ID}}
+      # 3. Verify authentication
+      - name: who-am-i action
+        uses: microsoft/powerplatform-actions/who-am-i@v1
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
 
+      # 4. Export solution
+      - name: export-solution action
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+          solution-name: ${{ github.event.inputs.solution_name }}
+          solution-output-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}.zip
 
-    - name: export-solution action
-      uses: microsoft/powerplatform-actions/export-solution@v1
-      with:
-        environment-url: ${{env.ENVIRONMENT_URL}}
-        app-id: ${{env.CLIENT_ID}}
-        client-secret: ${{ secrets.SOURCE_CLIENT_SECRET}}
-        tenant-id: ${{env.TENANT_ID}}
-        solution-name: ${{ github.event.inputs.solution_name }}
-        solution-output-file: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
+      # 5. Unpack solution
+      - name: unpack-solution action
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}.zip
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
+          solution-type: 'Unmanaged'
+          overwrite-files: true
 
-    - name: unpack-solution action
-      uses: microsoft/powerplatform-actions/unpack-solution@v1
-      with:
-        solution-file: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
-        solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
-        solution-type: 'Unmanaged'
-        overwrite-files: true
-        
-    #- name: Setup dotnet
-     # uses: actions/setup-dotnet@v4
-    #  with:
-       #   dotnet-version: '9.x'
- 
-   # - name: Install Power Platform CLI
-  #    run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-       
-    #- name: Increment Solution Version
-    #  run: |
-     #   echo "Incrementing version for ${{ github.event.inputs.solution_name }}"
-#        pac solution version `
-    #      --solution-name ${{ github.event.inputs.solution_name }} `
-     #     --solution-folder ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }} `
-      #    --increment revision
-     # shell: pwsh
+      # 6. Update solution version
+      - name: update-solution-version
+        uses: microsoft/powerplatform-actions/update-solution-version@v1
+        with:
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
+          strategy: revision
 
-         # ✅ Increment solution version using marketplace action
-    # ✅ Update solution version using correct inputs
-   # - name: update-solution-version
-     # uses: microsoft/powerplatform-actions/update-solution-version@v1
-     # with:
-     #  strategy: Solution
-      # solution-folder: ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }}
+      # 7. Publish solution
+      - name: Publish Solution
+        uses: microsoft/powerplatform-actions/publish-solution@v1
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
 
-        
-
-    # Commit & push directly to master
-    - name: Commit and push to master
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        mkdir -p ${{ github.event.inputs.solution_target_folder }}
-        cp -r ${{ github.event.inputs.solution_folder}}/${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder}}/
-        git add ${{ github.event.inputs.solution_target_folder}}/${{ github.event.inputs.solution_name }}
-        git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }}"
-        git push origin master
-      shell: bash
+      # 8. Commit & push directly to master
+      - name: Commit and push to master
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p ${{ github.event.inputs.solution_target_folder }}
+          cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
+          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}
+          git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }}"
+          git push origin master
+        shell: bash
