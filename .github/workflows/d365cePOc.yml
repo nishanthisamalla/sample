@@ -39,7 +39,6 @@ permissions:
 jobs:
   export-from-dev:
     runs-on: windows-latest
-    # or you can say runs-on: ubuntu-latest
     env:
       RUNNER_DEBUG: 1
 
@@ -82,12 +81,12 @@ jobs:
           solution-type: 'Unmanaged'
           overwrite-files: true
 
-      # 6. Update solution version
+      # 6. Update solution version (increment revision)
       - name: update-solution-version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
           solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
-          strategy: revision
+          revisionVersion: +1
 
       # 7. Publish solution
       - name: Publish Solution
