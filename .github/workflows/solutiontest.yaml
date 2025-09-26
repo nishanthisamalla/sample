@@ -23,6 +23,7 @@ on:
        description: 'folder name to be created and checked in *do not change*'
        required: true
        default: solutions/
+       
 env:
 #edit your values here
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
@@ -100,7 +101,7 @@ jobs:
       uses: microsoft/powerplatform-actions/update-solution-version@v1
       with:
           solution-folder: ${{ github.event.inputs.solution_exported_folder}}/${{ github.event.inputs.solution_name }}.zip
-          revisionVersion: +1    
+          revision-version: +1    
 
     # Commit & push directly to master
     - name: Commit and push to master
