@@ -92,6 +92,7 @@ jobs:
       - name: update-solution-version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}/other/Solution.xml
           revision-version: +1
 
 
