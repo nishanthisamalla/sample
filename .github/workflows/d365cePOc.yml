@@ -83,7 +83,7 @@ jobs:
           
 
       - name: Verify Solution.xml
-        run: dir ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}/Other
+        run: dir out/solutions/test/Other
 
       - name: Set solution path
         run: echo "SOLUTION_PATH=${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}/Other" >> $GITHUB_ENV
@@ -92,7 +92,7 @@ jobs:
       - name: update-solution-version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
-          solution-folder: D:\a\sample\sample\out\solutions\test\Other\Solution.xml
+          solution-folder: out/solutions/test/Other
           revision-version: +1
 
 
