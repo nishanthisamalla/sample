@@ -103,8 +103,8 @@ jobs:
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          solution-name: ${{ github.event.inputs.solution_name }}
-          solution-version: ${{ github.event.inputs.new_solution_version }}
+          name: ${{ github.event.inputs.solution_name }}
+          version: ${{ github.event.inputs.new_solution_version }}
 
       # 8. Commit & push directly to master
       - name: Commit and push to master
