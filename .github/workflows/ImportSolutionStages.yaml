@@ -11,6 +11,10 @@ on:
         description: 'Version of the solution to deploy (matches ZIP filename)'
         required: true
         default: 1.0.0.1
+      source_branch:
+        description: 'Branch containing exported solutions (PR merge branch or feature branch)'
+        required: true
+        default: master
       skip_managed_fut:
         description: 'Skip importing Managed solution to FUT environment?'
         required: false
@@ -31,17 +35,13 @@ jobs:
   import-fut:
     name: Import Managed Solution FUT
     runs-on: windows-latest
-    environment: FUT  # GitHub Environment for FUT with required reviewers
+    environment: FUT  # Use GitHub Environment for FUT with required reviewers
     if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Download exported solutions
-        uses: actions/download-artifact@v4
+      - name: Checkout source branch with exported solutions
+        uses: actions/checkout@v3
         with:
-          name: exported-solutions
-          path: ./solutions
+          ref: ${{ github.event.inputs.source_branch }}
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
@@ -55,23 +55,19 @@ jobs:
           tenant-id: ${{ env.TENANT_ID }}
           solution-file: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
           import-as-managed: true
-        
+          publish-workflows: true
 
   import-sit:
     name: Import Unmanaged Solution SIT
     runs-on: windows-latest
-    environment: SIT  # GitHub Environment for SIT with required reviewers
-    needs: import-fut  # Runs after FUT import completes successfully
+    environment: SIT  # Use GitHub Environment for SIT with required reviewers
+    needs: import-fut
     if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Download exported solutions
-        uses: actions/download-artifact@v3
+      - name: Checkout source branch with exported solutions
+        uses: actions/checkout@v3
         with:
-          name: exported-solutions
-          path: ./solutions
+          ref: ${{ github.event.inputs.source_branch }}
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
