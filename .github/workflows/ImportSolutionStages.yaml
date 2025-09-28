@@ -1,148 +1,61 @@
-name: Multi-Environment Import Solution
+name: Import D365 Solutions in Stages
 
-# Trigger: When changes are merged to master
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
+    inputs:
+      solution_name:
+        description: 'Name of the solution to deploy'
+        required: true
+        default: ALMLab
+      solution_version:
+        description: 'Version of the solution to deploy (matches ZIP filename)'
+        required: true
+        default: 1.0.0.1
+      skip_managed_fut:
+        description: 'Skip importing Managed solution to FUT environment?'
+        required: false
+        default: 'false'
+      skip_unmanaged_sit:
+        description: 'Skip importing Unmanaged solution to SIT environment?'
+        required: false
+        default: 'false'
 
 env:
-  CLIENT_ID: 'YOUR-CLIENT-ID-HERE'
-  TENANT_ID: 'YOUR-TENANT-ID-HERE'
-
-permissions:
-  contents: read
-  id-token: write
+  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
+  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
+  
 
 jobs:
-
-  import-fut:
-    name: Import to FUT
+  import-target-env:
     runs-on: windows-latest
-    environment: FUT  # GitHub Environment with optional reviewers for approval
     steps:
       - uses: actions/checkout@v2
-        with:
-          lfs: true
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      - name: who-am-i FUT
-        uses: microsoft/powerplatform-actions/who-am-i@v1
-        with:
-          environment-url: 'https://futenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.FUT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-
-      - name: Import Unmanaged Solution FUT
-        uses: microsoft/powerplatform-actions/import-solution@v1
-        with:
-          environment-url: 'https://futenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.FUT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/YOUR_SOLUTION_NAME-Unmanaged.zip'
-          overwrite-unmanaged-customizations: true
-          import-as-managed: false
-          publish-workflows: true
-
+      # Import Managed Solution to FUT
       - name: Import Managed Solution FUT
+        if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
-          environment-url: 'https://futenv.crm4.dynamics.com/'
+          environment-url: 'https://operations-gescopilottest.crm.dynamics.com/'
           app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.FUT_CLIENT_SECRET }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/YOUR_SOLUTION_NAME-Managed.zip'
+          solution-file: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
           import-as-managed: true
           publish-workflows: true
 
-  import-sit:
-    name: Import to SIT
-    needs: import-fut
-    runs-on: windows-latest
-    environment: SIT  # Requires manual approval from reviewers
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          lfs: true
-
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
-
-      - name: who-am-i SIT
-        uses: microsoft/powerplatform-actions/who-am-i@v1
-        with:
-          environment-url: 'https://sitenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SIT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-
+      # Import Unmanaged Solution to SIT
       - name: Import Unmanaged Solution SIT
+        if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
-          environment-url: 'https://sitenv.crm4.dynamics.com/'
+          environment-url: 'https://operations-gescopilottest.crm.dynamics.com/'
           app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SIT_CLIENT_SECRET }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/YOUR_SOLUTION_NAME-Unmanaged.zip'
-          overwrite-unmanaged-customizations: true
+          solution-file: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Unmanaged.zip'
           import-as-managed: false
-          publish-workflows: true
-
-      - name: Import Managed Solution SIT
-        uses: microsoft/powerplatform-actions/import-solution@v1
-        with:
-          environment-url: 'https://sitenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SIT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/YOUR_SOLUTION_NAME-Managed.zip'
-          import-as-managed: true
-          publish-workflows: true
-
-  import-uat:
-    name: Import to UAT
-    needs: import-sit
-    runs-on: windows-latest
-    environment: UAT  # Requires manual approval from reviewers
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          lfs: true
-
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
-
-      - name: who-am-i UAT
-        uses: microsoft/powerplatform-actions/who-am-i@v1
-        with:
-          environment-url: 'https://uatenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.UAT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-
-      - name: Import Unmanaged Solution UAT
-        uses: microsoft/powerplatform-actions/import-solution@v1
-        with:
-          environment-url: 'https://uatenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.UAT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/YOUR_SOLUTION_NAME-Unmanaged.zip'
-          overwrite-unmanaged-customizations: true
-          import-as-managed: false
-          publish-workflows: true
-
-      - name: Import Managed Solution UAT
-        uses: microsoft/powerplatform-actions/import-solution@v1
-        with:
-          environment-url: 'https://uatenv.crm4.dynamics.com/'
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.UAT_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/YOUR_SOLUTION_NAME-Managed.zip'
-          import-as-managed: true
           publish-workflows: true
