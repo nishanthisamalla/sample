@@ -1,4 +1,4 @@
-name: export-Mangaed-Unamanged-Create PR
+name: export-Managed-Unmanaged-Create-PR
 # Export solution from DEV environment
 # Unpack it and prepare, push to feature branch, and create a PR
 
@@ -63,7 +63,7 @@ jobs:
           environment-url: ${{ env.ENVIRONMENT_URL }}
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id : ${{ env.TENANT_ID }}
+          tenant-id: ${{ env.TENANT_ID }}
 
       - name: Export Unmanaged Solution
         uses: microsoft/powerplatform-actions/export-solution@v1
@@ -109,7 +109,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          BRANCH_NAME="export/${{ github.event.inputs.solution_name }}-$(date +%Y%m%d%H%M%S)"
+
+          # Generate timestamp
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BRANCH_NAME="export/${{ github.event.inputs.solution_name }}-$TIMESTAMP"
+
           git checkout -b $BRANCH_NAME
           mkdir -p ${{ github.event.inputs.solution_target_folder }}
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
@@ -125,7 +129,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Add exported solution ${{ github.event.inputs.solution_name }}"
-          branch: "export/${{ github.event.inputs.solution_name }}-$(date +%Y%m%d%H%M%S)"
+          branch: "export/${{ github.event.inputs.solution_name }}-$TIMESTAMP"
           base: master
           title: "Exported solution ${{ github.event.inputs.solution_name }}"
           body: "Automated export of solution ${{ github.event.inputs.solution_name }} and version ${{ github.event.inputs.new_solution_version }}"
