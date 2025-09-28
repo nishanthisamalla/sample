@@ -133,3 +133,4 @@ jobs:
           base: master
           title: "Exported solution ${{ github.event.inputs.solution_name }}"
           body: "Automated export of solution ${{ github.event.inputs.solution_name }} and version ${{ github.event.inputs.new_solution_version }}"
+          reviewers: "nishanthisamalla"
