@@ -23,20 +23,23 @@ on:
 env:
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
   TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
-  
+
+permissions:
+  contents: write
 
 jobs:
-  import-target-env:
+  import-fut:
+    name: Import Managed Solution FUT
     runs-on: windows-latest
+    environment: FUT  # Use GitHub Environment for FUT with required reviewers
+    if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
     steps:
       - uses: actions/checkout@v2
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      # Import Managed Solution to FUT
-      - name: Import Managed Solution FUT
-        if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
+      - name: Import Managed Solution to FUT
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
           environment-url: 'https://operations-gescopilottest.crm.dynamics.com/'
@@ -47,9 +50,19 @@ jobs:
           import-as-managed: true
           publish-workflows: true
 
-      # Import Unmanaged Solution to SIT
-      - name: Import Unmanaged Solution SIT
-        if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
+  import-sit:
+    name: Import Unmanaged Solution SIT
+    runs-on: windows-latest
+    environment: SIT  # Use GitHub Environment for SIT with required reviewers
+    needs: import-fut  # Runs after FUT import completes successfully
+    if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+
+      - name: Import Unmanaged Solution to SIT
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
           environment-url: 'https://operations-gescopilottest.crm.dynamics.com/'
