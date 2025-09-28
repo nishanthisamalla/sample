@@ -31,10 +31,17 @@ jobs:
   import-fut:
     name: Import Managed Solution FUT
     runs-on: windows-latest
-    environment: FUT  # Use GitHub Environment for FUT with required reviewers
+    environment: FUT  # GitHub Environment for FUT with required reviewers
     if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Download exported solutions
+        uses: actions/download-artifact@v3
+        with:
+          name: exported-solutions
+          path: ./solutions
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
@@ -53,11 +60,18 @@ jobs:
   import-sit:
     name: Import Unmanaged Solution SIT
     runs-on: windows-latest
-    environment: SIT  # Use GitHub Environment for SIT with required reviewers
+    environment: SIT  # GitHub Environment for SIT with required reviewers
     needs: import-fut  # Runs after FUT import completes successfully
     if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Download exported solutions
+        uses: actions/download-artifact@v3
+        with:
+          name: exported-solutions
+          path: ./solutions
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
