@@ -1,4 +1,4 @@
-name: export-test
+name: export-Mangaed-Unamanged-Create PR
 # Export solution from DEV environment
 # Unpack it and prepare, push to feature branch, and create a PR
 
