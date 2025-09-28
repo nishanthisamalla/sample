@@ -1,4 +1,4 @@
-name: export-test
+name: Multipl-export-test
 # Export multiple D365 solutions from DEV environment
 # Unpack, commit to GitHub, and update version online
 
