@@ -42,7 +42,7 @@ jobs:
       RUNNER_DEBUG: 1
     strategy:
       matrix:
-        solution: ${{ fromJSON('["' + join(github.event.inputs.solutions, '","') + '"]') }}
+        solution: ${{ fromJSON(format('["{0}"]', join(inputs.solutions, '","'))) }}
 
     steps:
       # 1. Checkout repo
