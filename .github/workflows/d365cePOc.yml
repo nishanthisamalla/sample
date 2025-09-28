@@ -73,6 +73,7 @@ jobs:
           environment-url: ${{ env.ENVIRONMENT_URL }}
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id : ${{ env.TENANT_ID }}
 
       # 5. Export solution
       - name: export-solution action
