@@ -41,7 +41,7 @@ jobs:
       - name: Checkout source branch with exported solutions
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.inputs.source_branch }}
+          ref: master
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
