@@ -106,30 +106,41 @@ jobs:
           version: ${{ github.event.inputs.new_solution_version }}
 
       - name: Create feature branch and commit solution
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Generate timestamp
+          # Generate timestamp for branch name
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
           BRANCH_NAME="export/${{ github.event.inputs.solution_name }}-$TIMESTAMP"
-
           git checkout -b $BRANCH_NAME
+
+          # Ensure target folder exists
           mkdir -p ${{ github.event.inputs.solution_target_folder }}
+
+          # Copy solution folder
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
-          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Unmanaged.zip ${{ github.event.inputs.solution_target_folder }}
-          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip ${{ github.event.inputs.solution_target_folder }}
+
+          # Rename exported unmanaged & managed zips with version
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Unmanaged.zip \
+             ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
+
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip \
+             ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
+
+          # Commit and push
           git add ${{ github.event.inputs.solution_target_folder }}
           git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }} to version ${{ github.event.inputs.new_solution_version }}"
           git push origin $BRANCH_NAME
-        shell: bash
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Add exported solution ${{ github.event.inputs.solution_name }}"
-          branch: "export/${{ github.event.inputs.solution_name }}-$TIMESTAMP"
+          branch: export/${{ github.event.inputs.solution_name }}-${{ env.TIMESTAMP }}
           base: master
           title: "Exported solution ${{ github.event.inputs.solution_name }}"
           body: "Automated export of solution ${{ github.event.inputs.solution_name }} and version ${{ github.event.inputs.new_solution_version }}"
