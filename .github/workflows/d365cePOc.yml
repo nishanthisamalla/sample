@@ -88,6 +88,7 @@ jobs:
 
       - name: Commit and push to master
         run: |
+          
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -99,13 +100,18 @@ jobs:
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} \
             ${{ github.event.inputs.solution_target_folder }}
 
-          # Copy exported ZIP with versioned name (both Managed & Unmanaged if needed)
-          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}.zip \
-            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}.zip
+          # Copy exported Unmanaged ZIP with versioned name
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Unmanaged.zip \
+            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
 
-          # Stage files
+          # Copy exported Managed ZIP with versioned name
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip \
+            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
+
+          # Stage files (solution folder + both zips)
           git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}
-          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}.zip
+          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
+          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
 
           # Commit (skip if no changes)
           git commit -m "Exported solution ${{ github.event.inputs.solution_name }} v${{ github.event.inputs.new_solution_version }}" || echo "No changes to commit"
