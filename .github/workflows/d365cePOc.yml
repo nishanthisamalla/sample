@@ -50,7 +50,7 @@ jobs:
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
 
-      - name: Publish Solution
+      - name: Publish Customization in Dev
         uses: microsoft/powerplatform-actions/publish-solution@v1
         with:
           environment-url: ${{ env.ENVIRONMENT_URL }}
