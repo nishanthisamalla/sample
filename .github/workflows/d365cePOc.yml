@@ -90,17 +90,34 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Ensure target folders exist
           mkdir -p ${{ github.event.inputs.solution_target_folder }}
-          cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
+          mkdir -p ${{ github.event.inputs.solution_exported_folder }}
+
+          # Copy unpacked solution folder
+          cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} \
+            ${{ github.event.inputs.solution_target_folder }}
+
+          # Copy exported ZIP with versioned name (both Managed & Unmanaged if needed)
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}.zip \
+            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}.zip
+
+          # Stage files
           git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}
-          git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }} to version ${{ github.event.inputs.new_solution_version }}"
+          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}.zip
+
+          # Commit (skip if no changes)
+          git commit -m "Exported solution ${{ github.event.inputs.solution_name }} v${{ github.event.inputs.new_solution_version }}" || echo "No changes to commit"
+
+          # Sync with master and push
           git pull --rebase origin master
           git push origin master
         shell: bash
 
       # Upload exported solution zip as artifact with versioned name
-      - name: Upload exported solution artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}
-          path: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}_${{ github.event.inputs.new_solution_version }}.zip
+      #- name: Upload exported solution artifact
+       # uses: actions/upload-artifact@v4
+       # with:
+        #  name: ${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}
+        #  path: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}_${{ github.event.inputs.new_solution_version }}.zip
