@@ -94,6 +94,7 @@ jobs:
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
           git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}
           git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }} to version ${{ github.event.inputs.new_solution_version }}"
+          git pull --rebase origin master
           git push origin master
         shell: bash
 
