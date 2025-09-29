@@ -53,9 +53,9 @@ jobs:
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
+          Path: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
           import-as-managed: true
-          publish-workflows: true
+
 
   import-sit:
     name: Import Unmanaged Solution SIT
