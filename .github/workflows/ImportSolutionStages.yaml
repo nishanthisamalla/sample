@@ -35,13 +35,13 @@ jobs:
   import-fut:
     name: Import Managed Solution FUT
     runs-on: windows-latest
-    environment: FUT  # Use GitHub Environment for FUT with required reviewers
+    environment: FUT
     if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
     steps:
       - name: Checkout source branch with exported solutions
         uses: actions/checkout@v3
         with:
-          ref: master
+          ref: ${{ github.event.inputs.source_branch }}
 
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
@@ -53,14 +53,13 @@ jobs:
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          Solution-file: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
+          solution-file: './out/exported/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
           import-as-managed: true
-
 
   import-sit:
     name: Import Unmanaged Solution SIT
     runs-on: windows-latest
-    environment: SIT  # Use GitHub Environment for SIT with required reviewers
+    environment: SIT
     needs: import-fut
     if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
     steps:
@@ -79,6 +78,6 @@ jobs:
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './solutions/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Unmanaged.zip'
+          solution-file: './out/exported/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Unmanaged.zip'
           import-as-managed: false
           publish-workflows: true
