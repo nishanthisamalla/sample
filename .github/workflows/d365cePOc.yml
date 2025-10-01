@@ -19,9 +19,6 @@ on:
         required: true
         default: solutions/
       new_solution_version:
-        description: 'New solution version to apply in Dataverse (e.g. 1.0.0.5)'
-        required: true
-        default: 1.0.0.1
 
 env:
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
@@ -58,7 +55,18 @@ jobs:
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id : ${{ env.TENANT_ID }}
 
-      - name: export-solution action
+      # ✅ New Step: Update solution version in Dataverse
+      - name: Update Solution Version
+        uses: microsoft/powerplatform-actions/update-solution-version@v1
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+          solution-name: ${{ github.event.inputs.solution_name }}
+          solution-version: ${{ github.event.inputs.new_solution_version }}
+
+      - name: export-solution action (Unmanaged)
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           environment-url: ${{ env.ENVIRONMENT_URL }}
@@ -66,64 +74,54 @@ jobs:
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
           solution-name: ${{ github.event.inputs.solution_name }}
-          solution-output-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}_${{ github.event.inputs.new_solution_version }}.zip
+          solution-output-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
+          managed: false
 
-      - name: unpack-solution action
-        uses: microsoft/powerplatform-actions/unpack-solution@v1
-        with:
-          solution-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}_${{ github.event.inputs.new_solution_version }}.zip
-          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
-          solution-type: 'Unmanaged'
-          overwrite-files: true
-
-      - name: set-online-solution-version
-        uses: microsoft/powerplatform-actions/set-online-solution-version@v1
+      - name: export-solution action (Managed)
+        uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           environment-url: ${{ env.ENVIRONMENT_URL }}
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-          name: ${{ github.event.inputs.solution_name }}
-          version: ${{ github.event.inputs.new_solution_version }}
+          solution-name: ${{ github.event.inputs.solution_name }}
+          solution-output-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
+          managed: true
+
+      - name: unpack-solution action
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
+          solution-folder: ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }}
+          solution-type: 'Unmanaged'
+          overwrite-files: true
 
       - name: Commit and push to master
         run: |
-          
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Ensure target folders exist
           mkdir -p ${{ github.event.inputs.solution_target_folder }}
-          mkdir -p ${{ github.event.inputs.solution_exported_folder }}
 
-          # Copy unpacked solution folder
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} \
             ${{ github.event.inputs.solution_target_folder }}
 
-          # Copy exported Unmanaged ZIP with versioned name
-          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Unmanaged.zip \
-            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip \
+            ${{ github.event.inputs.solution_target_folder }}
 
-          # Copy exported Managed ZIP with versioned name
-          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip \
-            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
+          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip \
+            ${{ github.event.inputs.solution_target_folder }}
 
-          # Stage files (solution folder + both zips)
-          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}
-          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
-          git add ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
-
-          # Commit (skip if no changes)
+          git add ${{ github.event.inputs.solution_target_folder }}
           git commit -m "Exported solution ${{ github.event.inputs.solution_name }} v${{ github.event.inputs.new_solution_version }}" || echo "No changes to commit"
-
-          # Sync with master and push
           git pull --rebase origin master
           git push origin master
         shell: bash
 
-      # Upload exported solution zip as artifact with versioned name
-      #- name: Upload exported solution artifact
-       # uses: actions/upload-artifact@v4
-       # with:
-        #  name: ${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}
-        #  path: ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}_${{ github.event.inputs.new_solution_version }}.zip
+      - name: Upload exported solution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}
+          path: |
+            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
+            ${{ github.event.inputs.solution_target_folder }}${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
