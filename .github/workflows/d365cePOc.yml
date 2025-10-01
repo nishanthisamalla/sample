@@ -59,12 +59,7 @@ jobs:
       - name: Update Solution Version
         uses: microsoft/powerplatform-actions/update-solution-version@v1
         with:
-          environment-url: ${{ env.ENVIRONMENT_URL }}
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-name: ${{ github.event.inputs.solution_name }}
-          solution-version: ${{ github.event.inputs.new_solution_version }}
+          revision-version : +1
 
       - name: export-solution action (Unmanaged)
         uses: microsoft/powerplatform-actions/export-solution@v1
