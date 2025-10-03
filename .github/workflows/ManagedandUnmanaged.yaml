@@ -25,6 +25,10 @@ on:
         description: 'New solution version to apply in Dataverse (e.g. 1.0.0.5)'
         required: true
         default: 1.0.0.1
+      export_managed:
+        description: 'Export managed solution? (true/false)'
+        required: false
+        default: 'false'
 
 env:
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
@@ -77,6 +81,7 @@ jobs:
           managed: false
 
       - name: Export Managed Solution
+        if: ${{ github.event.inputs.export_managed == 'true' }}
         uses: microsoft/powerplatform-actions/export-solution@v1
         with:
           environment-url: ${{ env.ENVIRONMENT_URL }}
@@ -123,12 +128,15 @@ jobs:
           # Copy solution folder
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
 
-          # Rename exported unmanaged & managed zips with version
+          # Copy unmanaged zip
           cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Unmanaged.zip \
              ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
 
-          cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip \
-             ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
+          # Copy managed zip only if export_managed is true
+          if [ "${{ github.event.inputs.export_managed }}" == "true" ]; then
+            cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip \
+               ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
+          fi
 
           # Commit and push
           git add ${{ github.event.inputs.solution_target_folder }}
