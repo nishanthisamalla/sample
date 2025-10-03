@@ -147,6 +147,7 @@ jobs:
 
           # Commit and push
           git add ${{ github.event.inputs.solution_target_folder }}
+          git reset .github/workflows/
           git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }} to version ${{ github.event.inputs.new_solution_version }}"
           git push origin $BRANCH_NAME
 
