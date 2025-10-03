@@ -11,7 +11,7 @@ on:
         default: ALMLab
         type: choice
         options:
-          - ALMLab
+          - test
           - SalesSolution
           - CustomerServiceSolution
           - FinanceSolution
