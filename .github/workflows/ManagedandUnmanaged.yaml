@@ -9,6 +9,13 @@ on:
         description: 'Name of the solution to work on from Power Platform'
         required: true
         default: ALMLab
+        type: choice
+        options:
+          - ALMLab
+          - SalesSolution
+          - CustomerServiceSolution
+          - FinanceSolution
+          - HRPortal
       solution_exported_folder:
         description: 'Folder name for staging the exported solution *do not change*'
         required: true
