@@ -24,12 +24,13 @@ on:
         required: false
         default: 'false'
 
-env:
-  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
-  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
-
 permissions:
-  contents: write
+  id-token: write       # 👈 Required for OIDC
+  contents: read
+
+env:
+  TENANT_ID: ${{ secrets.TENANT_ID }}
+  CLIENT_ID: ${{ secrets.CLIENT_ID }}
 
 jobs:
   import-fut:
@@ -46,15 +47,15 @@ jobs:
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      - name: Import Managed Solution to FUT
+      - name: Import Managed Solution to FUT (OIDC)
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
-          environment-url: 'https://operations-gescopilottest.crm.dynamics.com/'
+          environment-url: ${{ secrets.ENV_FUT_URL }}
           app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
           solution-file: './out/exported/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
           import-as-managed: true
+        # No client-secret anymore — OIDC used
 
   import-sit:
     name: Import Unmanaged Solution SIT
@@ -71,12 +72,11 @@ jobs:
       - name: Install Power Platform Tools
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      - name: Import Unmanaged Solution to SIT
+      - name: Import Unmanaged Solution to SIT (OIDC)
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
-          environment-url: 'https://operations-gescopilottest.crm.dynamics.com/'
+          environment-url: ${{ secrets.ENV_SIT_URL }}
           app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
           solution-file: './out/exported/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Unmanaged.zip'
           import-as-managed: false
