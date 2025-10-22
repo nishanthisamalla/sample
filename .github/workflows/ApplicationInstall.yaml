@@ -11,8 +11,7 @@ env:
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
   CLIENT_SECRET: '1Wj8Q~ihsJNRsUEdV9aZCbiExVoU3hKyw7O1BcFC'
   TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
-  # Field Service application ID (this can be hardcoded or moved to a secret if preferred)
-  FIELD_SERVICE_APP_ID: 1046a022-84e0-41f0-8c8b-0b771d1e9d3f
+  FIELD_SERVICE_APP_ID: '1046a022-84e0-41f0-8c8b-0b771d1e9d3f' # Field Service App ID
 
 jobs:
   install-field-service:
@@ -21,43 +20,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup dotnet
-
-        uses: actions/setup-dotnet@v4
-
-        with:
-
-          dotnet-version: '9.x'
- 
       - name: Install Power Platform CLI
+        run: |
+          dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+          echo "##[add-path]$HOME\.dotnet\tools"
 
-        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-
- 
-      - name: Authenticate with Power Platform
-        shell: pwsh
+      - name: Authenticate to Power Platform
         run: |
           pac auth create `
-            --url "${{ github.event.inputs.environment-url }}" `
-            --applicationId "${{ env.CLIENT_ID }}" `
-            --clientSecret "${{ env.CLIENT_SECRET }}" `
-            --tenant "${{ env.TENANT_ID }}"
+            --url ${{ github.event.inputs.environment-url }} `
+            --tenant ${{ env.TENANT_ID }} `
+            --applicationId ${{ env.CLIENT_ID }} `
+            --clientSecret ${{ env.CLIENT_SECRET }}
 
-          pac auth list
+      - name: Show current PAC context (who-am-i)
+        run: pac org who
+
       - name: Install Field Service Application
-        shell: pwsh
         run: |
           pac application install `
-            --applicationId "${{ env.FIELD_SERVICE_APP_ID }}" `
-            --environment "${{ github.event.inputs.environment-url }}"
-          
-          echo "✅ Field Service installation command executed."
+            --applicationId ${{ env.FIELD_SERVICE_APP_ID }} `
+            --environment ${{ github.event.inputs.environment-url }}
 
-      - name: Confirm Installation
-        shell: pwsh
-        run: |
-          pac application list --environment "${{ github.event.inputs.environment-url }}" | findstr "Field Service"
-      - name: Confirm installation success
+      - name: Confirm installation
         run: |
           echo "✅ Field Service app installation initiated on ${{ github.event.inputs.environment-url }}"
-          echo "Check Power Platform Admin Center for deployment progress."
+          pac application list --environment ${{ github.event.inputs.environment-url }}
