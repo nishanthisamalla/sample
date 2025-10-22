@@ -5,7 +5,7 @@ on:
     inputs:
       environment-url:
         description: 'Target Power Platform environment URL (e.g., https://org.crm.dynamics.com)'
-        required: true
+        required: false
 
 env:
   CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
@@ -26,7 +26,7 @@ jobs:
       - name: who-am-i
         uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
-          environment-url: ${{ github.event.inputs.environment-url }}
+          environment-url: https://operations-gesagenttest.crm4.dynamics.com
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
@@ -35,7 +35,7 @@ jobs:
       - name: Install Field Service using Power Platform Actions
         uses: microsoft/powerplatform-actions/install-application@v1
         with:
-          environment-url: ${{ github.event.inputs.environment-url }}
+          environment-url: https://operations-gesagenttest.crm4.dynamics.com
           client-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ env.CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
