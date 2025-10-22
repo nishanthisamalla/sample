@@ -25,7 +25,7 @@ jobs:
         uses: microsoft/powerplatform-actions/actions-install@v1
 
       - name: Install Field Service Application
-        uses: microsoft/powerplatform-actions/install-application@v1
+        uses: microsoft/powerplatform-actions/install-application@baa268c8cb72de054327df8fa55290ac4ace2bad
         with:
           environment-url: ${{ github.event.inputs.environment-url }}
           client-id: ${{ env.CLIENT_ID }}
