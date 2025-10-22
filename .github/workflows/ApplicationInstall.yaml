@@ -28,7 +28,7 @@ jobs:
         with:
           environment-url: https://operations-gesagenttest.crm4.dynamics.com
           app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.CLIENT_SECRET }}
+          client-secret: ${{ env.CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
 
         
