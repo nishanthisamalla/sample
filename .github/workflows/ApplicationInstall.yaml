@@ -36,7 +36,7 @@ jobs:
         uses: microsoft/powerplatform-actions/install-application@v1
         with:
           environment-url: https://operations-gesagenttest.crm4.dynamics.com
-          client-id: ${{ env.CLIENT_ID }}
+          app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ env.CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
           application-id: ${{ env.FIELD_SERVICE_APP_ID }}
