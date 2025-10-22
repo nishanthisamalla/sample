@@ -36,6 +36,14 @@ on:
         description: 'Export managed solution? (true/false)'
         required: false
         default: 'false'
+      strategy:
+        description: 'Strategy to update patch version (solution, gittags, filetracking)'
+        required: false
+        default: 'solution'
+      tracker_file:
+        description: 'Tracker CSV file name if using filetracking strategy'
+        required: false
+        default: 'ControlsStateVersionInfo.csv'
 
 env:
   ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
@@ -75,6 +83,16 @@ jobs:
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
+
+      # 🆕 Added Step to Update Solution Version Before Export
+      - name: Update Solution Version (local files)
+        uses: ./.github/actions/update-solution-version
+        with:
+          build-version: '1'
+          revision-version: '0'
+          patch-version: '0'
+          strategy: ${{ github.event.inputs.strategy }}
+          tracker-file: ${{ github.event.inputs.tracker_file }}
 
       - name: Export Unmanaged Solution
         uses: microsoft/powerplatform-actions/export-solution@v1
@@ -123,29 +141,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Generate timestamp for branch name
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
           BRANCH_NAME="export/${{ github.event.inputs.solution_name }}-$TIMESTAMP"
           git checkout -b $BRANCH_NAME
 
-          # Ensure target folder exists
           mkdir -p ${{ github.event.inputs.solution_target_folder }}
 
-          # Copy solution folder
           cp -r ${{ github.event.inputs.solution_folder }}${{ github.event.inputs.solution_name }} ${{ github.event.inputs.solution_target_folder }}
 
-          # Copy unmanaged zip
           cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Unmanaged.zip \
              ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip
 
-          # Copy managed zip only if export_managed is true
           if [ "${{ github.event.inputs.export_managed }}" == "true" ]; then
             cp ${{ github.event.inputs.solution_exported_folder }}${{ github.event.inputs.solution_name }}-Managed.zip \
                ${{ github.event.inputs.solution_target_folder }}/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.new_solution_version }}-Managed.zip
           fi
 
-          # Commit and push
           git add ${{ github.event.inputs.solution_target_folder }}
           git reset .github/workflows/
           git commit -m "Exported and updated solution ${{ github.event.inputs.solution_name }} to version ${{ github.event.inputs.new_solution_version }}"
