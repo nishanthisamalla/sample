@@ -20,8 +20,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Install Power Platform CLI
-        uses: microsoft/powerplatform-actions@v1.9.1
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+
+      - name: who-am-i
+        uses: microsoft/powerplatform-actions/who-am-i@v1
+        with:
+          environment-url: ${{ github.event.inputs.environment-url }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+
         
       - name: Install Field Service using Power Platform Actions
         uses: microsoft/powerplatform-actions/install-application@v1
