@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Field Service Application
-        uses: microsoft/powerplatform-actions/install-application@main
+        uses: microsoft/powerplatform-actions/install-application@v1
         with:
           environment: https://operations-gesagenttest.crm4.dynamics.com
           app-id: ${{ env.CLIENT_ID }}
