@@ -1,48 +1,26 @@
-name: Install Field Service Application
+name: Install D365 Field Service App
 
 on:
   workflow_dispatch:
-    inputs:
-      environment-url:
-        description: 'Target Power Platform environment URL (e.g., https://org.crm.dynamics.com)'
-        required: false
 
 env:
-  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
-  CLIENT_SECRET: '1Wj8Q~ihsJNRsUEdV9aZCbiExVoU3hKyw7O1BcFC'
-  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
-  FIELD_SERVICE_APP_ID: '1046a022-84e0-41f0-8c8b-0b771d1e9d3f' # Field Service App ID
+  CLIENT_ID: 79623805-9f58-4b81-a1aa-81480ca86f44
+  CLIENT_SECRET: 1Wj8Q~ihsJNRsUEdV9aZCbiExVoU3hKyw7O1BcFC
+  TENANT_ID: 13588042-fe43-45bb-8ce1-83b2e6dd126c
 
 jobs:
   install-field-service:
     runs-on: windows-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      - name: who-am-i
-        uses: microsoft/powerplatform-actions/who-am-i@v1
+      - name: Install Field Service Application
+        uses: microsoft/powerplatform-actions/install-application@main
         with:
-          environment-url: https://operations-gesagenttest.crm4.dynamics.com
+          environment: https://operations-gesagenttest.crm4.dynamics.com
           app-id: ${{ env.CLIENT_ID }}
           client-secret: ${{ env.CLIENT_SECRET }}
           tenant-id: ${{ env.TENANT_ID }}
-
-        
-      - name: Install Field Service using Power Platform Actions
-        uses: microsoft/powerplatform-actions/install-application@v1
-        with:
-          environment-url: https://operations-gesagenttest.crm4.dynamics.com
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ env.CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
-          application-id: ${{ env.FIELD_SERVICE_APP_ID }}
-          overwrite: true
-          skip-dependencies: false
-
-      - name: Confirm Installation
-        run: |
-          echo "✅ Field Service installation triggered in ${{ github.event.inputs.environment-url }}"
+          application-list: .github/actions/create-environment/Applicationslist.json
+          working-directory: .
