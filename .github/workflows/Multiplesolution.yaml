@@ -1,0 +1,156 @@
+name: Multi export-Managed-Unmanaged-Create-PR
+# Export multiple solutions from DEV environment
+# Unpack, push to feature branch, and create a PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      solution_names:
+        description: 'Comma-separated list of solutions to export (e.g. SalesSolution,CustomerServiceSolution)'
+        required: true
+        default: SalesSolution,CustomerServiceSolution
+      solution_exported_folder:
+        description: 'Folder name for staging the exported solutions *do not change*'
+        required: true
+        default: out/exported/
+      solution_folder:
+        description: 'Staging folder for the unpacked solutions before check-in *do not change*'
+        required: true
+        default: out/solutions/
+      solution_target_folder: 
+        description: 'Folder name to be created and checked in *do not change*'
+        required: true
+        default: solutions/
+      new_solution_version:
+        description: 'New solution version to apply in Dataverse (e.g. 1.0.0.5)'
+        required: true
+        default: 1.0.0.1
+      export_managed:
+        description: 'Export managed solutions? (true/false)'
+        required: false
+        default: 'false'
+
+env:
+  ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
+  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
+  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  export-from-dev:
+    runs-on: windows-latest
+    env:
+      RUNNER_DEBUG: 1
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+
+      - name: Who Am I
+        uses: microsoft/powerplatform-actions/who-am-i@v1
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+
+      - name: Publish All Customizations
+        uses: microsoft/powerplatform-actions/publish-solution@v1
+        with:
+          environment-url: ${{ env.ENVIRONMENT_URL }}
+          app-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+
+      - name: Export and Unpack Multiple Solutions
+        shell: bash
+        run: |
+          IFS=',' read -r -a SOLUTIONS <<< "${{ github.event.inputs.solution_names }}"
+          mkdir -p "${{ github.event.inputs.solution_exported_folder }}"
+          mkdir -p "${{ github.event.inputs.solution_folder }}"
+          
+          for SOLUTION in "${SOLUTIONS[@]}"; do
+            SOLUTION_NAME=$(echo "$SOLUTION" | xargs) # trim spaces
+            echo "=============================="
+            echo "🚀 Processing: $SOLUTION_NAME"
+            echo "=============================="
+
+            echo "Exporting Unmanaged Solution..."
+            pac solution export \
+              --environment "${{ env.ENVIRONMENT_URL }}" \
+              --name "$SOLUTION_NAME" \
+              --path "${{ github.event.inputs.solution_exported_folder }}${SOLUTION_NAME}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip" \
+              --managed false \
+              --clientId "${{ env.CLIENT_ID }}" \
+              --tenantId "${{ env.TENANT_ID }}" \
+              --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
+
+            if [ "${{ github.event.inputs.export_managed }}" == "true" ]; then
+              echo "Exporting Managed Solution..."
+              pac solution export \
+                --environment "${{ env.ENVIRONMENT_URL }}" \
+                --name "$SOLUTION_NAME" \
+                --path "${{ github.event.inputs.solution_exported_folder }}${SOLUTION_NAME}-${{ github.event.inputs.new_solution_version }}-Managed.zip" \
+                --managed true \
+                --clientId "${{ env.CLIENT_ID }}" \
+                --tenantId "${{ env.TENANT_ID }}" \
+                --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
+            fi
+
+            echo "Unpacking Solution..."
+            pac solution unpack \
+              --zipfile "${{ github.event.inputs.solution_exported_folder }}${SOLUTION_NAME}-${{ github.event.inputs.new_solution_version }}-Unmanaged.zip" \
+              --folder "${{ github.event.inputs.solution_folder }}${SOLUTION_NAME}" \
+              --solution-type Unmanaged \
+              --overwrite true
+
+            echo "Setting Online Solution Version..."
+            pac solution version set \
+              --environment "${{ env.ENVIRONMENT_URL }}" \
+              --name "$SOLUTION_NAME" \
+              --version "${{ github.event.inputs.new_solution_version }}" \
+              --clientId "${{ env.CLIENT_ID }}" \
+              --tenantId "${{ env.TENANT_ID }}" \
+              --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
+          done
+
+      - name: Commit and Push All Solutions
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+          BRANCH_NAME="export/multiple-solutions-$TIMESTAMP"
+          git checkout -b $BRANCH_NAME
+
+          mkdir -p "${{ github.event.inputs.solution_target_folder }}"
+          cp -r "${{ github.event.inputs.solution_folder }}"* "${{ github.event.inputs.solution_target_folder }}"
+          cp -r "${{ github.event.inputs.solution_exported_folder }}"* "${{ github.event.inputs.solution_target_folder }}"
+
+          git add "${{ github.event.inputs.solution_target_folder }}"
+          git reset .github/workflows/
+          git commit -m "Exported multiple solutions to version ${{ github.event.inputs.new_solution_version }}"
+          git push origin $BRANCH_NAME
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Add exported Power Platform solutions"
+          branch: export/multiple-solutions-${{ env.TIMESTAMP }}
+          base: master
+          title: "Exported multiple Power Platform solutions"
+          body: |
+            Automated export of multiple Power Platform solutions:
+            **Solutions:** `${{ github.event.inputs.solution_names }}`
+            **Version:** `${{ github.event.inputs.new_solution_version }}`
+          reviewers: "nishanthisamalla"
