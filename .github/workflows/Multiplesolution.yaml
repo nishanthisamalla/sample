@@ -1,125 +1,154 @@
-name: export-all-d365-solutions
+name: export-Managed-Unmanaged-Create-PR (PAC CLI)
 
 on:
   workflow_dispatch:
     inputs:
-      skip_solution1:
-        description: 'Skip exporting Solution1'
+      solution_name:
+        description: 'Name of the solution to export from Power Platform'
+        required: true
+        default: ALMLab
+        type: choice
+        options:
+          - test
+          - SalesSolution
+          - CustomerServiceSolution
+          - FinanceSolution
+          - HRPortal
+      export_managed:
+        description: 'Export managed solution? (true/false)'
         required: false
-        type: boolean
-        default: false
-      skip_solution2:
-        description: 'Skip exporting Solution2'
-        required: false
-        type: boolean
-        default: false
-      skip_solution3:
-        description: 'Skip exporting Solution3'
-        required: false
-        type: boolean
-        default: false
-      skip_solution4:
-        description: 'Skip exporting Solution4'
-        required: false
-        type: boolean
-        default: false
+        default: 'false'
+
+env:
+  ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
+  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
+  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  export:
-    runs-on: ubuntu-latest
+  export-from-dev:
+    runs-on: windows-latest
 
     steps:
+      # 🧾 Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1
+      # ⚙️ Step 2: Setup .NET (required for pac CLI)
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
 
-      - name: Define solution metadata
-        id: meta
+      # 🧰 Step 3: Install Power Platform CLI
+      - name: Install Power Platform CLI
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      # 🔐 Step 4: Authenticate with Dataverse (Service Principal)
+      - name: Authenticate with Dataverse
         run: |
-          echo "solutions=('Solution1' 'Solution2' 'Solution3' 'Solution4')" >> $GITHUB_ENV
-          echo "managed_solutions=('Solution1' 'Solution3')" >> $GITHUB_ENV
-          echo "unmanaged_only_solutions=('Solution2' 'Solution4')" >> $GITHUB_ENV
+          pac auth create ^
+            --cloud "Public" ^
+            --url "${{ env.ENVIRONMENT_URL }}" ^
+            --tenant "${{ env.TENANT_ID }}" ^
+            --applicationId "${{ env.CLIENT_ID }}" ^
+            --clientSecret "${{ secrets.SOURCE_CLIENT_SECRET }}"
 
-      - name: Export all solutions
+      # 🧩 Step 5: Display environment info
+      - name: Display Environment Info
+        run: pac org who
+
+      # 🚀 Step 6: Publish customizations
+      - name: Publish All Customizations
+        run: pac solution publish
+
+      # 🔄 Step 7: Automatically increment solution version
+      - name: Auto-increment solution version
+        id: version
+        shell: pwsh
+        run: |
+          $solution = "${{ github.event.inputs.solution_name }}"
+          $json = pac solution list --json | ConvertFrom-Json
+          $current = ($json | Where-Object { $_.uniqueName -eq $solution }).version
+          Write-Host "Current version: $current"
+
+          # Split version components
+          $parts = $current -split '\.'
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $build = [int]$parts[2]
+          $revision = [int]$parts[3] + 1
+          $newVersion = "$major.$minor.$build.$revision"
+
+          Write-Host "New version: $newVersion"
+          pac solution version --name $solution --version $newVersion
+          echo "newVersion=$newVersion" >> $env:GITHUB_ENV
+
+      # 📦 Step 8: Export Unmanaged Solution
+      - name: Export Unmanaged Solution
+        run: |
+          mkdir -p out/exported
+          pac solution export ^
+            --name "${{ github.event.inputs.solution_name }}" ^
+            --path "out/exported/${{ github.event.inputs.solution_name }}-${{ env.newVersion }}-Unmanaged.zip" ^
+            --managed false ^
+            --overwrite true
+
+      # 📦 Step 9: Export Managed Solution (conditional)
+      - name: Export Managed Solution
+        if: ${{ github.event.inputs.export_managed == 'true' }}
+        run: |
+          pac solution export ^
+            --name "${{ github.event.inputs.solution_name }}" ^
+            --path "out/exported/${{ github.event.inputs.solution_name }}-${{ env.newVersion }}-Managed.zip" ^
+            --managed true ^
+            --overwrite true
+
+      # 🔓 Step 10: Unpack Unmanaged Solution for source control
+      - name: Unpack Unmanaged Solution
+        run: |
+          mkdir -p out/solutions/${{ github.event.inputs.solution_name }}
+          pac solution unpack ^
+            --zipFile "out/exported/${{ github.event.inputs.solution_name }}-${{ env.newVersion }}-Unmanaged.zip" ^
+            --folder "out/solutions/${{ github.event.inputs.solution_name }}" ^
+            --overwrite true
+
+      # 💾 Step 11: Commit and push changes to new branch
+      - name: Commit and Push Solution Changes
         shell: bash
         run: |
-          mkdir -p ./Solutions
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BRANCH_NAME="export/${{ github.event.inputs.solution_name }}-$TIMESTAMP"
 
-          # Convert GitHub input booleans to shell vars
-          SKIP_SOLUTION1="${{ github.event.inputs.skip_solution1 }}"
-          SKIP_SOLUTION2="${{ github.event.inputs.skip_solution2 }}"
-          SKIP_SOLUTION3="${{ github.event.inputs.skip_solution3 }}"
-          SKIP_SOLUTION4="${{ github.event.inputs.skip_solution4 }}"
+          git checkout -b $BRANCH_NAME
+          mkdir -p solutions/
+          cp -r out/solutions/${{ github.event.inputs.solution_name }} solutions/
+          cp out/exported/${{ github.event.inputs.solution_name }}-${{ env.newVersion }}-Unmanaged.zip solutions/
 
-          for SOL in "${solutions[@]}"; do
-            echo "🔹 Processing solution: $SOL"
+          if [ "${{ github.event.inputs.export_managed }}" == "true" ]; then
+            cp out/exported/${{ github.event.inputs.solution_name }}-${{ env.newVersion }}-Managed.zip solutions/
+          fi
 
-            # Map skip flags manually
-            if [[ "$SOL" == "Solution1" && "$SKIP_SOLUTION1" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
-            if [[ "$SOL" == "Solution2" && "$SKIP_SOLUTION2" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
-            if [[ "$SOL" == "Solution3" && "$SKIP_SOLUTION3" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
-            if [[ "$SOL" == "Solution4" && "$SKIP_SOLUTION4" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
+          git add solutions/
+          git commit -m "Exported ${{ github.event.inputs.solution_name }} v${{ env.newVersion }}"
+          git push origin $BRANCH_NAME
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
-            # Clean previous exports
-            rm -rf "./Solutions/${SOL}"* || true
-
-            echo "🔢 Incrementing version for $SOL..."
-            pwsh -Command "microsoft/powerplatform-actions/update-solution-version@v1 \
-              -environment-url '${{ secrets.PP_ENVIRONMENT_URL }}' \
-              -user-name '${{ secrets.PP_USER }}' \
-              -password-secret '${{ secrets.PP_PASSWORD }}' \
-              -solution-name '$SOL' \
-              -strategy 'increment'"
-
-            # Export managed first if applicable
-            if [[ " ${managed_solutions[@]} " =~ " ${SOL} " ]]; then
-              echo "📦 Exporting managed $SOL..."
-              pwsh -Command "microsoft/powerplatform-actions/export-solution@v1 \
-                -environment-url '${{ secrets.PP_ENVIRONMENT_URL }}' \
-                -user-name '${{ secrets.PP_USER }}' \
-                -password-secret '${{ secrets.PP_PASSWORD }}' \
-                -solution-name '$SOL' \
-                -managed true \
-                -path './Solutions/${SOL}_Managed.zip'"
-            fi
-
-            # Export unmanaged
-            echo "📦 Exporting unmanaged $SOL..."
-            pwsh -Command "microsoft/powerplatform-actions/export-solution@v1 \
-              -environment-url '${{ secrets.PP_ENVIRONMENT_URL }}' \
-              -user-name '${{ secrets.PP_USER }}' \
-              -password-secret '${{ secrets.PP_PASSWORD }}' \
-              -solution-name '$SOL' \
-              -managed false \
-              -path './Solutions/${SOL}.zip'"
-
-            # Unpack
-            echo "📂 Unpacking $SOL..."
-            pwsh -Command "microsoft/powerplatform-actions/unpack-solution@v1 \
-              -solution-file './Solutions/${SOL}.zip' \
-              -folder './Solutions/${SOL}'"
-          done
-
-      - name: Commit and push all exports
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git add ./Solutions/*
-          git commit -m "Automated export of all D365 solutions - $(date '+%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
-          git push origin HEAD:feature/solutions-export-${{ github.run_number }}
-
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
+      # 🔀 Step 12: Create Pull Request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
         with:
-          branch: feature/solutions-export-${{ github.run_number }}
-          title: "Automated Export of All D365 Solutions"
-          body: "All managed/unmanaged solutions exported and version auto-incremented."
-          labels: |
-            automated
-            export
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.BRANCH_NAME }}
+          base: master
+          title: "Exported solution ${{ github.event.inputs.solution_name }} v${{ env.newVersion }}"
+          body: |
+            Automated export using PAC CLI  
+            - Solution: **${{ github.event.inputs.solution_name }}**  
+            - Version: **${{ env.newVersion }}**
+          reviewers: "nishanthisamalla"
