@@ -1,203 +1,133 @@
-name: export-Managed-Unmanaged-Create-PR
-# Manual-only workflow: Export multiple solutions (managed/unmanaged) and create single PR.
-# Incorporates official microsoft/powerplatform-actions.
+name: export-all-d365-solutions
 
 on:
   workflow_dispatch:
     inputs:
-      skip_test:
-        description: 'Skip solution: test'
+      skip_solution1:
+        description: 'Skip exporting Solution1'
         required: false
-        default: 'false'
-      skip_SalesSolution:
-        description: 'Skip solution: SalesSolution'
+        type: boolean
+        default: false
+      skip_solution2:
+        description: 'Skip exporting Solution2'
         required: false
-        default: 'false'
-      skip_CustomerServiceSolution:
-        description: 'Skip solution: CustomerServiceSolution'
+        type: boolean
+        default: false
+      skip_solution3:
+        description: 'Skip exporting Solution3'
         required: false
-        default: 'false'
-      skip_FinanceSolution:
-        description: 'Skip solution: FinanceSolution'
+        type: boolean
+        default: false
+      skip_solution4:
+        description: 'Skip exporting Solution4'
         required: false
-        default: 'false'
-      skip_HRPortal:
-        description: 'Skip solution: HRPortal'
-        required: false
-        default: 'false'
-      export_managed_all:
-        description: 'Enable exporting managed variants for solutions that support it (true/false)'
-        required: false
-        default: 'true'
+        type: boolean
+        default: false
 
-env:
-  ENVIRONMENT_URL: 'https://operations-gesagenttest.crm4.dynamics.com/'
-  CLIENT_ID: '79623805-9f58-4b81-a1aa-81480ca86f44'
-  TENANT_ID: '13588042-fe43-45bb-8ce1-83b2e6dd126c'
-  SOLUTIONS_ROOT: 'Solutions/'
-
+# 🚫 No push or PR triggers — manual only
+# Ensures no PR or schedule auto-runs
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  export-from-dev:
-    runs-on: windows-latest
-    env:
-      RUNNER_DEBUG: 1
+  export:
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+      # Optional identity check
+      - name: Who Am I (Optional)
+        continue-on-error: true
+        uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
-          environment-url: ${{ env.ENVIRONMENT_URL }}
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
+          environment-url: ${{ secrets.PP_ENVIRONMENT_URL }}
+          user-name: ${{ secrets.PP_USER }}
+          password-secret: ${{ secrets.PP_PASSWORD }}
 
-      - name: Publish All Customizations
-        uses: microsoft/powerplatform-actions/publish-solution@v1
-        with:
-          environment-url: ${{ env.ENVIRONMENT_URL }}
-          app-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
+      # 🧭 Define managed/unmanaged metadata
+      - name: Define solution metadata
+        id: meta
+        run: |
+          echo "solutions=Solution1 Solution2 Solution3 Solution4" >> $GITHUB_ENV
+          echo "managed_solutions=Solution1 Solution3" >> $GITHUB_ENV
+          echo "unmanaged_only_solutions=Solution2 Solution4" >> $GITHUB_ENV
 
-      - name: Prepare solutions folder
+      # ⚙️ Loop through and export all solutions
+      - name: Export all solutions
         shell: bash
         run: |
-          mkdir -p "${{ env.SOLUTIONS_ROOT }}"
+          mkdir -p ./Solutions
 
-      - name: Export & unpack solutions loop
-        shell: bash
-        env:
-          ENV_URL: ${{ env.ENVIRONMENT_URL }}
-          CLIENT_ID: ${{ env.CLIENT_ID }}
-          TENANT_ID: ${{ env.TENANT_ID }}
-          CLIENT_SECRET: ${{ secrets.SOURCE_CLIENT_SECRET }}
-          EXPORT_MANAGED_ALL: ${{ github.event.inputs.export_managed_all }}
-        run: |
-          set -euo pipefail
-
-          declare -A supports_managed=(
-            ["test"]="false"
-            ["SalesSolution"]="true"
-            ["CustomerServiceSolution"]="true"
-            ["FinanceSolution"]="true"
-            ["HRPortal"]="false"
-          )
-          SOL_LIST=( test SalesSolution CustomerServiceSolution FinanceSolution HRPortal )
-
-          skip_flag() {
-            local sol=$1
-            case "$sol" in
-              test) echo "${{ github.event.inputs.skip_test }}" ;;
-              SalesSolution) echo "${{ github.event.inputs.skip_SalesSolution }}" ;;
-              CustomerServiceSolution) echo "${{ github.event.inputs.skip_CustomerServiceSolution }}" ;;
-              FinanceSolution) echo "${{ github.event.inputs.skip_FinanceSolution }}" ;;
-              HRPortal) echo "${{ github.event.inputs.skip_HRPortal }}" ;;
-              *) echo "false" ;;
-            esac
-          }
-
-          get_token() {
-            local tenant=$1 clientId=$2 clientSecret=$3 envUrl=$4
-            host=$(echo "$envUrl" | sed -e 's~https\?://~~' -e 's~/$~~')
-            token_url="https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token"
-            scope="${host}/.default"
-            resp=$(curl -s -X POST "${token_url}" \
-              -H "Content-Type: application/x-www-form-urlencoded" \
-              -d "client_id=${clientId}&client_secret=${clientSecret}&scope=${scope}&grant_type=client_credentials")
-            echo "$resp" | python -c "import sys, json; d=json.load(sys.stdin); print(d.get('access_token',''))"
-          }
-
-          bump_version() {
-            local sol=$1 token=$2 envUrl=$3
-            api="${envUrl%/}/api/data/v9.2/solutions?$filter=friendlyname eq '${sol}'&$select=version,uniquename"
-            resp=$(curl -s -X GET "$api" -H "Authorization: Bearer $token" -H "Accept: application/json")
-            version=$(echo "$resp" | python -c "import sys, json; d=json.load(sys.stdin); print(d['value'][0]['version'])")
-            IFS='.' read -r -a parts <<< "$version"
-            last_idx=$((${#parts[@]}-1))
-            last_val=${parts[$last_idx]}
-            if ! [[ "$last_val" =~ ^[0-9]+$ ]]; then last_val=0; fi
-            new_last=$((last_val+1))
-            parts[$last_idx]=$new_last
-            new_version=$(IFS='.'; echo "${parts[*]}")
-            echo "Setting online version to $new_version for $sol"
-            # Use official action for version set
-            echo "::group::Set version for $sol to $new_version"
-            gh workflow run --tooling-placeholder # placeholder for version set step
-            echo "::endgroup::"
-            echo "$new_version"
-          }
-
-          for SOL in "${SOL_LIST[@]}"; do
-            SKIP=$(skip_flag "$SOL" | tr '[:upper:]' '[:lower:]')
-            if [ "$SKIP" == "true" ]; then
-              echo "Skipping solution $SOL"
+          for SOL in $solutions; do
+            SKIP_VAR="skip_${SOL,,}"
+            if [ "${{ github.event.inputs[SKIP_VAR] }}" = "true" ]; then
+              echo "⏭️ Skipping $SOL"
               continue
             fi
-            echo "==== Processing $SOL ===="
-            TOKEN=$(get_token "$TENANT_ID" "$CLIENT_ID" "$CLIENT_SECRET" "$ENV_URL")
-            if [ -z "$TOKEN" ]; then
-              echo "Failed to acquire token"; exit 1
+
+            echo "🚀 Processing $SOL..."
+
+            # Clean existing exports
+            rm -rf ./Solutions/${SOL}* || true
+
+            # 🔢 Increment solution version using official action
+            echo "🔄 Updating version for $SOL..."
+            gh workflow run microsoft/powerplatform-actions/update-solution-version@v1 \
+              --env environment-url="${{ secrets.PP_ENVIRONMENT_URL }}" \
+              --env user-name="${{ secrets.PP_USER }}" \
+              --env password-secret="${{ secrets.PP_PASSWORD }}" \
+              --env solution-name="$SOL" \
+              --env strategy="increment"
+
+            # Export managed first if applicable
+            if [[ " $managed_solutions " =~ " $SOL " ]]; then
+              echo "📦 Exporting managed $SOL..."
+              npx microsoft/powerplatform-actions export-solution@v1 \
+                --environment-url "${{ secrets.PP_ENVIRONMENT_URL }}" \
+                --user-name "${{ secrets.PP_USER }}" \
+                --password-secret "${{ secrets.PP_PASSWORD }}" \
+                --solution-name "$SOL" \
+                --managed true \
+                --path "./Solutions/${SOL}_Managed.zip"
             fi
-            NEW_VER=$(bump_version "$SOL" "$TOKEN" "$ENV_URL") || exit 1
-            TARGET_DIR="${{ env.SOLUTIONS_ROOT }}${SOL}"
-            MANAGED_ZIP="${{ env.SOLUTIONS_ROOT }}${SOL}_Managed-v${NEW_VER}.zip"
-            UNMANAGED_ZIP="${{ env.SOLUTIONS_ROOT }}${SOL}-v${NEW_VER}.zip"
-            rm -rf "$TARGET_DIR"
-            rm -f "${{ env.SOLUTIONS_ROOT }}${SOL}"_Managed-*.zip || true
-            rm -f "${{ env.SOLUTIONS_ROOT }}${SOL}"-v*.zip || true
-            mkdir -p "$TARGET_DIR"
 
-            if [ "${supports_managed[$SOL]}" == "true" ] && [ "$EXPORT_MANAGED_ALL" == "true" ]; then
-              echo "Exporting MANAGED for $SOL -> $MANAGED_ZIP"
-              uses: microsoft/powerplatform-actions/export-solution@v1
-              with:
-                environment-url: "${{ env.ENVIRONMENT_URL }}"
-                app-id: "${{ env.CLIENT_ID }}"
-                client-secret: "${{ secrets.SOURCE_CLIENT_SECRET }}"
-                tenant-id: "${{ env.TENANT_ID }}"
-                solution-name: $SOL
-                solution-output-file: $MANAGED_ZIP
-                managed: true
-            fi
+            # Export unmanaged
+            echo "📦 Exporting unmanaged $SOL..."
+            npx microsoft/powerplatform-actions export-solution@v1 \
+              --environment-url "${{ secrets.PP_ENVIRONMENT_URL }}" \
+              --user-name "${{ secrets.PP_USER }}" \
+              --password-secret "${{ secrets.PP_PASSWORD }}" \
+              --solution-name "$SOL" \
+              --managed false \
+              --path "./Solutions/${SOL}.zip"
 
-            echo "Exporting UNMANAGED for $SOL -> $UNMANAGED_ZIP"
-            uses: microsoft/powerplatform-actions/export-solution@v1
-            with:
-              environment-url: "${{ env.ENVIRONMENT_URL }}"
-              app-id: "${{ env.CLIENT_ID }}"
-              client-secret: "${{ secrets.SOURCE_CLIENT_SECRET }}"
-              tenant-id: "${{ env.TENANT_ID }}"
-              solution-name: $SOL
-              solution-output-file: $UNMANAGED_ZIP
-              managed: false
+            # Unpack the unmanaged ZIP
+            echo "📂 Unpacking $SOL..."
+            npx microsoft/powerplatform-actions unpack-solution@v1 \
+              --solution-file "./Solutions/${SOL}.zip" \
+              --folder "./Solutions/${SOL}"
 
-            echo "Unpacking $SOL into $TARGET_DIR"
-            uses: microsoft/powerplatform-actions/unpack-solution@v1
-            with:
-              solution-file: $UNMANAGED_ZIP
-              solution-folder: $TARGET_DIR
-              solution-type: 'Unmanaged'
-              overwrite-files: true
-
-            echo "Completed $SOL"
           done
 
-      - name: Commit & push and create PR
-        uses: peter-evans/create-pull-request@v5
+      # 📦 Commit all exports after loop completes
+      - name: Commit and push all exports
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add ./Solutions/*
+          git commit -m "Automated export of all solutions on $(date '+%Y-%m-%d %H:%M')"
+          git push origin HEAD:feature/solutions-export-${{ github.run_number }}
+
+      # 🔀 Create PR after all exports
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Exported Power Platform solutions (auto-versioned)"
-          branch: export/multi-solutions-${{ github.run_number }}-${{ github.run_id }}
-          base: master
-          title: "Exported Power Platform solutions (auto-versioned)"
-          body: |
-            Automated export for solutions (skipped: ${{ github.event.inputs }})
-          reviewers: "nishanthisamalla"
+          branch: feature/solutions-export-${{ github.run_number }}
+          title: "Automated Export of All D365 Solutions"
+          body: "This PR includes exported managed/unmanaged solutions with auto-incremented versions."
+          labels: |
+            automated
+            export
