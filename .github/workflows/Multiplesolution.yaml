@@ -24,8 +24,6 @@ on:
         type: boolean
         default: false
 
-# 🚫 No push or PR triggers — manual only
-# Ensures no PR or schedule auto-runs
 permissions:
   contents: write
   pull-requests: write
@@ -38,96 +36,90 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Optional identity check
-      - name: Who Am I (Optional)
-        continue-on-error: true
-        uses: microsoft/powerplatform-actions/who-am-i@v1
-        with:
-          environment-url: ${{ secrets.PP_ENVIRONMENT_URL }}
-          user-name: ${{ secrets.PP_USER }}
-          password-secret: ${{ secrets.PP_PASSWORD }}
+      - name: Install Power Platform Tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
 
-      # 🧭 Define managed/unmanaged metadata
       - name: Define solution metadata
         id: meta
         run: |
-          echo "solutions=Solution1 Solution2 Solution3 Solution4" >> $GITHUB_ENV
-          echo "managed_solutions=Solution1 Solution3" >> $GITHUB_ENV
-          echo "unmanaged_only_solutions=Solution2 Solution4" >> $GITHUB_ENV
+          echo "solutions=('Solution1' 'Solution2' 'Solution3' 'Solution4')" >> $GITHUB_ENV
+          echo "managed_solutions=('Solution1' 'Solution3')" >> $GITHUB_ENV
+          echo "unmanaged_only_solutions=('Solution2' 'Solution4')" >> $GITHUB_ENV
 
-      # ⚙️ Loop through and export all solutions
       - name: Export all solutions
         shell: bash
         run: |
           mkdir -p ./Solutions
 
-          for SOL in $solutions; do
-            SKIP_VAR="skip_${SOL,,}"
-            if [ "${{ github.event.inputs[SKIP_VAR] }}" = "true" ]; then
-              echo "⏭️ Skipping $SOL"
-              continue
-            fi
+          # Convert GitHub input booleans to shell vars
+          SKIP_SOLUTION1="${{ github.event.inputs.skip_solution1 }}"
+          SKIP_SOLUTION2="${{ github.event.inputs.skip_solution2 }}"
+          SKIP_SOLUTION3="${{ github.event.inputs.skip_solution3 }}"
+          SKIP_SOLUTION4="${{ github.event.inputs.skip_solution4 }}"
 
-            echo "🚀 Processing $SOL..."
+          for SOL in "${solutions[@]}"; do
+            echo "🔹 Processing solution: $SOL"
 
-            # Clean existing exports
-            rm -rf ./Solutions/${SOL}* || true
+            # Map skip flags manually
+            if [[ "$SOL" == "Solution1" && "$SKIP_SOLUTION1" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
+            if [[ "$SOL" == "Solution2" && "$SKIP_SOLUTION2" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
+            if [[ "$SOL" == "Solution3" && "$SKIP_SOLUTION3" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
+            if [[ "$SOL" == "Solution4" && "$SKIP_SOLUTION4" == "true" ]]; then echo "⏭️ Skipping $SOL"; continue; fi
 
-            # 🔢 Increment solution version using official action
-            echo "🔄 Updating version for $SOL..."
-            gh workflow run microsoft/powerplatform-actions/update-solution-version@v1 \
-              --env environment-url="${{ secrets.PP_ENVIRONMENT_URL }}" \
-              --env user-name="${{ secrets.PP_USER }}" \
-              --env password-secret="${{ secrets.PP_PASSWORD }}" \
-              --env solution-name="$SOL" \
-              --env strategy="increment"
+            # Clean previous exports
+            rm -rf "./Solutions/${SOL}"* || true
+
+            echo "🔢 Incrementing version for $SOL..."
+            pwsh -Command "microsoft/powerplatform-actions/update-solution-version@v1 \
+              -environment-url '${{ secrets.PP_ENVIRONMENT_URL }}' \
+              -user-name '${{ secrets.PP_USER }}' \
+              -password-secret '${{ secrets.PP_PASSWORD }}' \
+              -solution-name '$SOL' \
+              -strategy 'increment'"
 
             # Export managed first if applicable
-            if [[ " $managed_solutions " =~ " $SOL " ]]; then
+            if [[ " ${managed_solutions[@]} " =~ " ${SOL} " ]]; then
               echo "📦 Exporting managed $SOL..."
-              npx microsoft/powerplatform-actions export-solution@v1 \
-                --environment-url "${{ secrets.PP_ENVIRONMENT_URL }}" \
-                --user-name "${{ secrets.PP_USER }}" \
-                --password-secret "${{ secrets.PP_PASSWORD }}" \
-                --solution-name "$SOL" \
-                --managed true \
-                --path "./Solutions/${SOL}_Managed.zip"
+              pwsh -Command "microsoft/powerplatform-actions/export-solution@v1 \
+                -environment-url '${{ secrets.PP_ENVIRONMENT_URL }}' \
+                -user-name '${{ secrets.PP_USER }}' \
+                -password-secret '${{ secrets.PP_PASSWORD }}' \
+                -solution-name '$SOL' \
+                -managed true \
+                -path './Solutions/${SOL}_Managed.zip'"
             fi
 
             # Export unmanaged
             echo "📦 Exporting unmanaged $SOL..."
-            npx microsoft/powerplatform-actions export-solution@v1 \
-              --environment-url "${{ secrets.PP_ENVIRONMENT_URL }}" \
-              --user-name "${{ secrets.PP_USER }}" \
-              --password-secret "${{ secrets.PP_PASSWORD }}" \
-              --solution-name "$SOL" \
-              --managed false \
-              --path "./Solutions/${SOL}.zip"
+            pwsh -Command "microsoft/powerplatform-actions/export-solution@v1 \
+              -environment-url '${{ secrets.PP_ENVIRONMENT_URL }}' \
+              -user-name '${{ secrets.PP_USER }}' \
+              -password-secret '${{ secrets.PP_PASSWORD }}' \
+              -solution-name '$SOL' \
+              -managed false \
+              -path './Solutions/${SOL}.zip'"
 
-            # Unpack the unmanaged ZIP
+            # Unpack
             echo "📂 Unpacking $SOL..."
-            npx microsoft/powerplatform-actions unpack-solution@v1 \
-              --solution-file "./Solutions/${SOL}.zip" \
-              --folder "./Solutions/${SOL}"
-
+            pwsh -Command "microsoft/powerplatform-actions/unpack-solution@v1 \
+              -solution-file './Solutions/${SOL}.zip' \
+              -folder './Solutions/${SOL}'"
           done
 
-      # 📦 Commit all exports after loop completes
       - name: Commit and push all exports
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           git add ./Solutions/*
-          git commit -m "Automated export of all solutions on $(date '+%Y-%m-%d %H:%M')"
+          git commit -m "Automated export of all D365 solutions - $(date '+%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
           git push origin HEAD:feature/solutions-export-${{ github.run_number }}
 
-      # 🔀 Create PR after all exports
       - name: Create pull request
         uses: peter-evans/create-pull-request@v6
         with:
           branch: feature/solutions-export-${{ github.run_number }}
           title: "Automated Export of All D365 Solutions"
-          body: "This PR includes exported managed/unmanaged solutions with auto-incremented versions."
+          body: "All managed/unmanaged solutions exported and version auto-incremented."
           labels: |
             automated
             export
