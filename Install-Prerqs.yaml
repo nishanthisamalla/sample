@@ -1,0 +1,42 @@
+name: Install Power Platform Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      application-file:
+        description: 'Path to the application package (zip / msapp / solution) in the repo'
+        required: true
+        default: 'artifacts/my-app.zip'
+
+jobs:
+  install-app:
+    runs-on: windows-latest     # powerplatform actions support windows or ubuntu
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # (Optional) restore/prepare artifact if you generate it earlier in workflow
+      # - name: Build / produce package
+      #   run: <your build steps>
+
+      - name: Install application using Microsoft action
+        uses: microsoft/powerplatform-actions/install-application@main
+        with:
+          # --- AUTHENTICATION ---
+          # Common patterns: service principal or username/password.
+          # Match input names to the action.yml if they differ.
+          auth-type: 'serviceprincipal'            # or 'usernamepassword'
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+          # --- TARGET ENVIRONMENT ---
+          environment-url: 'https://<your-environment>.crm.dynamics.com'  # or the environment ID/URL
+
+          # --- APPLICATION INPUTS (example placeholders) ---
+          application-file: ${{ github.event.inputs.application-file }}   # path in repository
+          overwrite: 'true'      # or 'false' — depends on action inputs
+          wait-for-completion: 'true'
+
+      - name: Show result
+        run: echo "Install step finished. Check action logs for details."
