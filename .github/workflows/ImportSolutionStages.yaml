@@ -1,5 +1,5 @@
 name: CE Import Solutions (Managed/UnManaged)
- 
+
 on:
   workflow_dispatch:
     inputs:
@@ -22,19 +22,45 @@ on:
         required: false
         type: boolean
         default: true
- 
+
+      # -------- Skip Environments --------
+      skip_fut_03:
+        description: 'Skip Fut-03 environment'
+        required: false
+        type: boolean
+        default: false
+
+      skip_fno_dm_common:
+        description: 'Skip FNO-DM-COMMON environment'
+        required: false
+        type: boolean
+        default: false
+
+      skip_sit_ce_fin_03:
+        description: 'Skip SIT-CE-FIN-03 environment'
+        required: false
+        type: boolean
+        default: false
+
+      skip_sit_ce_03:
+        description: 'Skip SIT-CE-03 environment'
+        required: false
+        type: boolean
+        default: false
+
 permissions:
   id-token: write
   contents: read
- 
+
 env:
   AAD_TENANT_ID: ${{ secrets.AZURE_STAGING1_TENANT_ID }}
- 
+
 jobs:
- 
+
   # ---------------- Fut-03 ----------------
   import-fut-03:
     name: Import → Fut-03
+    if: ${{ github.event.inputs.skip_fut_03 != 'true' }}
     runs-on: ubuntu-latest
     environment: FUT-03
     steps:
@@ -42,17 +68,17 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag_name }}
- 
+
       - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
         with:
           add-tools-to-path: true
- 
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
- 
+
       - run: sudo apt-get update -y && sudo apt-get install -y jq
- 
+
       - name: Authenticate Fut-03
         run: |
           pac auth create --name Fut-03-auth \
@@ -62,12 +88,14 @@ jobs:
             --githubFederated
           pac auth select --name Fut-03-auth
           pac auth who
+
       - name: Import Solutions
         run: |
           set -euo pipefail
           SOLUTIONS='${{ github.event.inputs.solution_names }}'
           MANAGED='${{ github.event.inputs.managed_solution_names }}'
           PUBLISH='${{ github.event.inputs.publish_changes }}'
+
           for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
             echo "::group::Import to Fut-03: $SOL"
             ZIP="Solutions/${SOL}.zip"
@@ -79,9 +107,11 @@ jobs:
             [[ "$PUBLISH" == "true" ]] && pac solution publish
             echo "::endgroup::"
           done
+
   # ---------------- FNO-DM-COMMON ----------------
   import-fno-dm-common:
     name: Import → FNO-DM-COMMON
+    if: ${{ github.event.inputs.skip_fno_dm_common != 'true' }}
     runs-on: ubuntu-latest
     environment: FNO-DM-COMMON
     needs: [import-fut-03]
@@ -90,13 +120,17 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag_name }}
+
       - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
         with:
           add-tools-to-path: true
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
+
       - run: sudo apt-get update -y && sudo apt-get install -y jq
+
       - name: Authenticate FNO-DM-COMMON
         run: |
           pac auth create --name FNO-DM-COMMON-auth \
@@ -106,12 +140,14 @@ jobs:
             --githubFederated
           pac auth select --name FNO-DM-COMMON-auth
           pac auth who
+
       - name: Import Solutions
         run: |
           set -euo pipefail
           SOLUTIONS='${{ github.event.inputs.solution_names }}'
           MANAGED='${{ github.event.inputs.managed_solution_names }}'
           PUBLISH='${{ github.event.inputs.publish_changes }}'
+
           for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
             echo "::group::Import to FNO-DM-COMMON: $SOL"
             ZIP="Solutions/${SOL}.zip"
@@ -123,9 +159,11 @@ jobs:
             [[ "$PUBLISH" == "true" ]] && pac solution publish
             echo "::endgroup::"
           done
+
   # ---------------- SIT-CE-FIN-03 ----------------
   import-sit-ce-fin-03:
     name: Import → SIT-CE-FIN-03
+    if: ${{ github.event.inputs.skip_sit_ce_fin_03 != 'true' }}
     runs-on: ubuntu-latest
     environment: SIT-CE-FIN-03
     needs: [import-fno-dm-common]
@@ -134,13 +172,17 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag_name }}
+
       - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
         with:
           add-tools-to-path: true
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
+
       - run: sudo apt-get update -y && sudo apt-get install -y jq
+
       - name: Authenticate SIT-CE-FIN-03
         run: |
           pac auth create --name SIT-CE-FIN-03-auth \
@@ -150,12 +192,14 @@ jobs:
             --githubFederated
           pac auth select --name SIT-CE-FIN-03-auth
           pac auth who
+
       - name: Import Solutions
         run: |
           set -euo pipefail
           SOLUTIONS='${{ github.event.inputs.solution_names }}'
           MANAGED='${{ github.event.inputs.managed_solution_names }}'
           PUBLISH='${{ github.event.inputs.publish_changes }}'
+
           for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
             echo "::group::Import to SIT-CE-FIN-03: $SOL"
             ZIP="Solutions/${SOL}.zip"
@@ -167,9 +211,11 @@ jobs:
             [[ "$PUBLISH" == "true" ]] && pac solution publish
             echo "::endgroup::"
           done
+
   # ---------------- SIT-CE-03 ----------------
   import-sit-ce-03:
     name: Import → SIT-CE-03
+    if: ${{ github.event.inputs.skip_sit_ce_03 != 'true' }}
     runs-on: ubuntu-latest
     environment: SIT-CE-03
     needs: [import-sit-ce-fin-03]
@@ -178,13 +224,17 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag_name }}
+
       - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
         with:
           add-tools-to-path: true
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
+
       - run: sudo apt-get update -y && sudo apt-get install -y jq
+
       - name: Authenticate SIT-CE-03
         run: |
           pac auth create --name SIT-CE-03-auth \
@@ -194,12 +244,14 @@ jobs:
             --githubFederated
           pac auth select --name SIT-CE-03-auth
           pac auth who
+
       - name: Import Solutions
         run: |
           set -euo pipefail
           SOLUTIONS='${{ github.event.inputs.solution_names }}'
           MANAGED='${{ github.event.inputs.managed_solution_names }}'
           PUBLISH='${{ github.event.inputs.publish_changes }}'
+
           for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
             echo "::group::Import to SIT-CE-03: $SOL"
             ZIP="Solutions/${SOL}.zip"
