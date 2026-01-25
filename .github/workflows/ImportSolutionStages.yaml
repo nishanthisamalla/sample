@@ -1,83 +1,213 @@
-name: Import D365 Solutions in Stages
-
+name: CE Import Solutions (Managed/UnManaged)
+ 
 on:
   workflow_dispatch:
     inputs:
-      solution_name:
-        description: 'Name of the solution to deploy'
+      tag_name:
+        description: 'Tag that points to the exported batch (e.g., Solution Exports @ 2025-12-22 16:44)'
         required: true
-        default: ALMLab
-      solution_version:
-        description: 'Version of the solution to deploy (matches ZIP filename)'
+        type: string
+      solution_names:
+        description: 'JSON array of solution unique names to import'
         required: true
-        default: 1.0.0.1
-      source_branch:
-        description: 'Branch containing exported solutions (PR merge branch or feature branch)'
+        type: string
+        default: '["CatDealerTemplate","CatDealerTemplateDW","FieldServicePlugins","SalesPlugins"]'
+      managed_solution_names:
+        description: 'JSON array of solutions to import as Managed (others import Unmanaged)'
         required: true
-        default: master
-      skip_managed_fut:
-        description: 'Skip importing Managed solution to FUT environment?'
+        type: string
+        default: '["CatDealerTemplate","CatDealerTemplateDW"]'
+      publish_changes:
+        description: 'Publish customizations after import'
         required: false
-        default: 'false'
-      skip_unmanaged_sit:
-        description: 'Skip importing Unmanaged solution to SIT environment?'
-        required: false
-        default: 'false'
-
+        type: boolean
+        default: true
+ 
 permissions:
-  id-token: write       
+  id-token: write
   contents: read
-
+ 
 env:
-  TENANT_ID: ${{ secrets.TENANT_ID }}
-  CLIENT_ID: ${{ secrets.CLIENT_ID }}
-
+  AAD_TENANT_ID: ${{ secrets.AZURE_STAGING1_TENANT_ID }}
+ 
 jobs:
-  import-fut:
-    name: Import Managed Solution FUT
-    runs-on: windows-latest
-    environment: FUT
-    if: ${{ github.event.inputs.skip_managed_fut != 'true' }}
+ 
+  # ---------------- Fut-03 ----------------
+  import-fut-03:
+    name: Import → Fut-03
+    runs-on: ubuntu-latest
+    environment: FUT-03
     steps:
-      - name: Checkout source branch with exported solutions
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.source_branch }}
-
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
-
-      - name: Import Managed Solution to FUT (OIDC)
-        uses: microsoft/powerplatform-actions/import-solution@v1
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name }}
+ 
+      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
         with:
-          environment-url: ${{ secrets.ENV_FUT_URL }}
-          app-id: ${{ env.CLIENT_ID }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './out/exported/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Managed.zip'
-          import-as-managed: true
-        # No client-secret anymore — OIDC used
-
-  import-sit:
-    name: Import Unmanaged Solution SIT
-    runs-on: windows-latest
-    environment: SIT
-    needs: import-fut
-    if: ${{ github.event.inputs.skip_unmanaged_sit != 'true' }}
+          add-tools-to-path: true
+ 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+ 
+      - run: sudo apt-get update -y && sudo apt-get install -y jq
+ 
+      - name: Authenticate Fut-03
+        run: |
+          pac auth create --name Fut-03-auth \
+            --environment "${{ secrets.Environment_URL }}" \
+            --applicationId "${{ secrets.Client_ID }}" \
+            --tenant "${{ env.AAD_TENANT_ID }}" \
+            --githubFederated
+          pac auth select --name Fut-03-auth
+          pac auth who
+      - name: Import Solutions
+        run: |
+          set -euo pipefail
+          SOLUTIONS='${{ github.event.inputs.solution_names }}'
+          MANAGED='${{ github.event.inputs.managed_solution_names }}'
+          PUBLISH='${{ github.event.inputs.publish_changes }}'
+          for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
+            echo "::group::Import to Fut-03: $SOL"
+            ZIP="Solutions/${SOL}.zip"
+            if echo "$MANAGED" | jq -e --arg s "$SOL" 'index($s) != null' >/dev/null; then
+              [[ -f "Solutions/${SOL}_managed.zip" ]] && ZIP="Solutions/${SOL}_managed.zip"
+            fi
+            [[ -f "$ZIP" ]] || { echo "ERROR: $ZIP not found"; exit 1; }
+            pac solution import --path "$ZIP"
+            [[ "$PUBLISH" == "true" ]] && pac solution publish
+            echo "::endgroup::"
+          done
+  # ---------------- FNO-DM-COMMON ----------------
+  import-fno-dm-common:
+    name: Import → FNO-DM-COMMON
+    runs-on: ubuntu-latest
+    environment: FNO-DM-COMMON
+    needs: [import-fut-03]
     steps:
-      - name: Checkout source branch with exported solutions
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.source_branch }}
-
-      - name: Install Power Platform Tools
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
-
-      - name: Import Unmanaged Solution to SIT (OIDC)
-        uses: microsoft/powerplatform-actions/import-solution@v1
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name }}
+      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
         with:
-          environment-url: ${{ secrets.ENV_SIT_URL }}
-          app-id: ${{ env.CLIENT_ID }}
-          tenant-id: ${{ env.TENANT_ID }}
-          solution-file: './out/exported/${{ github.event.inputs.solution_name }}-${{ github.event.inputs.solution_version }}-Unmanaged.zip'
-          import-as-managed: false
-          publish-workflows: true
+          add-tools-to-path: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+      - run: sudo apt-get update -y && sudo apt-get install -y jq
+      - name: Authenticate FNO-DM-COMMON
+        run: |
+          pac auth create --name FNO-DM-COMMON-auth \
+            --environment "${{ secrets.Environment_URL }}" \
+            --applicationId "${{ secrets.Client_ID }}" \
+            --tenant "${{ env.AAD_TENANT_ID }}" \
+            --githubFederated
+          pac auth select --name FNO-DM-COMMON-auth
+          pac auth who
+      - name: Import Solutions
+        run: |
+          set -euo pipefail
+          SOLUTIONS='${{ github.event.inputs.solution_names }}'
+          MANAGED='${{ github.event.inputs.managed_solution_names }}'
+          PUBLISH='${{ github.event.inputs.publish_changes }}'
+          for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
+            echo "::group::Import to FNO-DM-COMMON: $SOL"
+            ZIP="Solutions/${SOL}.zip"
+            if echo "$MANAGED" | jq -e --arg s "$SOL" 'index($s) != null' >/dev/null; then
+              [[ -f "Solutions/${SOL}_managed.zip" ]] && ZIP="Solutions/${SOL}_managed.zip"
+            fi
+            [[ -f "$ZIP" ]] || { echo "ERROR: $ZIP not found"; exit 1; }
+            pac solution import --path "$ZIP"
+            [[ "$PUBLISH" == "true" ]] && pac solution publish
+            echo "::endgroup::"
+          done
+  # ---------------- SIT-CE-FIN-03 ----------------
+  import-sit-ce-fin-03:
+    name: Import → SIT-CE-FIN-03
+    runs-on: ubuntu-latest
+    environment: SIT-CE-FIN-03
+    needs: [import-fno-dm-common]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name }}
+      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+        with:
+          add-tools-to-path: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+      - run: sudo apt-get update -y && sudo apt-get install -y jq
+      - name: Authenticate SIT-CE-FIN-03
+        run: |
+          pac auth create --name SIT-CE-FIN-03-auth \
+            --environment "${{ secrets.Environment_URL }}" \
+            --applicationId "${{ secrets.Client_ID }}" \
+            --tenant "${{ env.AAD_TENANT_ID }}" \
+            --githubFederated
+          pac auth select --name SIT-CE-FIN-03-auth
+          pac auth who
+      - name: Import Solutions
+        run: |
+          set -euo pipefail
+          SOLUTIONS='${{ github.event.inputs.solution_names }}'
+          MANAGED='${{ github.event.inputs.managed_solution_names }}'
+          PUBLISH='${{ github.event.inputs.publish_changes }}'
+          for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
+            echo "::group::Import to SIT-CE-FIN-03: $SOL"
+            ZIP="Solutions/${SOL}.zip"
+            if echo "$MANAGED" | jq -e --arg s "$SOL" 'index($s) != null' >/dev/null; then
+              [[ -f "Solutions/${SOL}_managed.zip" ]] && ZIP="Solutions/${SOL}_managed.zip"
+            fi
+            [[ -f "$ZIP" ]] || { echo "ERROR: $ZIP not found"; exit 1; }
+            pac solution import --path "$ZIP"
+            [[ "$PUBLISH" == "true" ]] && pac solution publish
+            echo "::endgroup::"
+          done
+  # ---------------- SIT-CE-03 ----------------
+  import-sit-ce-03:
+    name: Import → SIT-CE-03
+    runs-on: ubuntu-latest
+    environment: SIT-CE-03
+    needs: [import-sit-ce-fin-03]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name }}
+      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+        with:
+          add-tools-to-path: true
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+      - run: sudo apt-get update -y && sudo apt-get install -y jq
+      - name: Authenticate SIT-CE-03
+        run: |
+          pac auth create --name SIT-CE-03-auth \
+            --environment "${{ secrets.Environment_URL }}" \
+            --applicationId "${{ secrets.Client_ID }}" \
+            --tenant "${{ env.AAD_TENANT_ID }}" \
+            --githubFederated
+          pac auth select --name SIT-CE-03-auth
+          pac auth who
+      - name: Import Solutions
+        run: |
+          set -euo pipefail
+          SOLUTIONS='${{ github.event.inputs.solution_names }}'
+          MANAGED='${{ github.event.inputs.managed_solution_names }}'
+          PUBLISH='${{ github.event.inputs.publish_changes }}'
+          for SOL in $(echo "$SOLUTIONS" | jq -r '.[]'); do
+            echo "::group::Import to SIT-CE-03: $SOL"
+            ZIP="Solutions/${SOL}.zip"
+            if echo "$MANAGED" | jq -e --arg s "$SOL" 'index($s) != null' >/dev/null; then
+              [[ -f "Solutions/${SOL}_managed.zip" ]] && ZIP="Solutions/${SOL}_managed.zip"
+            fi
+            [[ -f "$ZIP" ]] || { echo "ERROR: $ZIP not found"; exit 1; }
+            pac solution import --path "$ZIP"
+            [[ "$PUBLISH" == "true" ]] && pac solution publish
+            echo "::endgroup::"
+          done
