@@ -29,7 +29,7 @@ jobs:
             --service-name ${{ secrets.DEV_APIM }} \
             --api-id ${{ secrets.API_NAME }} \
             --export-format OpenApiJsonFile \
-            --file-path ./export
+            --file-path export/api-template.json
 
       - name: Verify Export
         run: |
