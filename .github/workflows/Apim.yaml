@@ -3,6 +3,10 @@ name: Sync APIM Dev to Test
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   export-deploy:
     runs-on: ubuntu-latest
