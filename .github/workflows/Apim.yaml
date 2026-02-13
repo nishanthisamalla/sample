@@ -28,5 +28,5 @@ jobs:
             --resource-group ${{ secrets.DEV_RG }} \
             --service-name ${{ secrets.DEV_APIM }} \
             --api-id ${{ secrets.API_NAME }} \
-            --export-format ArmTemplate \
+            --export-format OpenApiJsonFile \
             --file-path api-template.json
