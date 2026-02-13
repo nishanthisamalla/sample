@@ -30,3 +30,9 @@ jobs:
             --api-id ${{ secrets.API_NAME }} \
             --export-format OpenApiJsonFile \
             --file-path api-template.json
+            
+      - name: Upload API Template
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-template
+          path: api-template.json
