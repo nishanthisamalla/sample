@@ -1,0 +1,29 @@
+name: Sync APIM Dev to Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      - name: Export API from DEV APIM (ARM)
+        run: |
+          az apim api export \
+            --resource-group ${{ secrets.DEV_RG }} \
+            --service-name ${{ secrets.DEV_APIM }} \
+            --api-id ${{ secrets.API_NAME }} \
+            --format arm-template \
+            --output-file api-template.json
