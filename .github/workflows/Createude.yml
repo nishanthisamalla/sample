@@ -14,18 +14,18 @@ jobs:
       - uses: actions/checkout@v4
  
       # Install PAC CLI wrapper actions
-      - uses: microsoft/powerplatform-actions/actions-install@v1
+      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
  
       # Create environment using federated credentials (no client secret)
       - name: Create UDE environment
-        uses: microsoft/powerplatform-actions/create-environment@v1
+        uses: microsoft/powerplatform-actions/create-environment@v1.9.1
         with:
           # OIDC: only app-id + tenant-id required when federated credentials are configured
           app-id:    ${{ secrets.PP_CLIENT_ID }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
  
           # REQUIRED display name for the new environment
-          name: ude-dev01
+          name: test-ude-dev01
  
           # Environment configuration
           environment-type: Sandbox
