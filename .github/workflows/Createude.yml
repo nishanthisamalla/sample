@@ -1,47 +1,52 @@
-name: Create UDE (OIDC, no secrets)
- 
+name: Create UDE (OIDC + Async)
+
 on:
   workflow_dispatch:
- 
+
 permissions:
-  id-token: write   # required for GitHub OIDC
+  id-token: write
   contents: read
- 
+
 jobs:
   create-ude:
     runs-on: ubuntu-latest
+    timeout-minutes: 15   # since async returns immediately
+
     steps:
-      - uses: actions/checkout@v4
- 
-      # Install PAC CLI wrapper actions
-      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
- 
-      # Create environment using federated credentials (no client secret)
-      - name: Create UDE environment
-        uses: microsoft/powerplatform-actions/create-environment@v1.9.1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Power Platform CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+
+      # 🔐 Authenticate using OIDC (Federated Credentials)
+      - name: Authenticate to Power Platform
+        uses: microsoft/powerplatform-actions/authenticate@v1.9.1
         with:
-          # OIDC: only app-id + tenant-id required when federated credentials are configured
-          app-id:    ${{ secrets.PP_CLIENT_ID }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
- 
-          # REQUIRED display name for the new environment
-          name: test-ude-dev01
- 
-          # Environment configuration
-          environment-type: Sandbox
-          region: unitedstates        # change if needed
-          currency: USD
-          language: 1033
-          domain-name: ude-dev01
- 
-          # UDE bootstrap (FinOps provisioning anchor)
-          templates: D365_FinOps_Finance
-          template-metadata-json: |
-            {
+
+      # 🚀 Create UDE Environment Asynchronously
+      - name: Create UDE Environment (Async)
+        run: |
+          pac admin create \
+            --name "fotest-ude-dev01" \
+            --type Sandbox \
+            --region unitedstates \
+            --currency USD \
+            --language 1033 \
+            --domain ude-dev01 \
+            --templates D365_FinOps_Finance \
+            --template-metadata-json '{
               "PostProvisioningPackages": [
                 {
                   "applicationUniqueName": "msdyn_FinanceAndOperationsProvisioningAppAnchor",
                   "parameters": "DevToolsEnabled=true|DemoDataEnabled=true"
                 }
               ]
-            }
+            }' \
+            --async
+
+      # 📋 Optional: Show all environments
+      - name: List Environments
+        run: pac admin list
