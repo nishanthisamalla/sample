@@ -29,7 +29,7 @@ jobs:
  
           # Environment configuration
           environment-type: Sandbox
-          region: india        # change if needed
+          region: unitedstates        # change if needed
           currency: USD
           language: 1033
           domain-name: ude-dev01
