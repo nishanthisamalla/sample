@@ -19,13 +19,6 @@ jobs:
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
-      # 🔐 Authenticate using OIDC (Federated Credentials)
-      - name: Authenticate to Power Platform
-        uses: microsoft/powerplatform-actions/authenticate@v1.9.1
-        with:
-          app-id: ${{ secrets.PP_CLIENT_ID }}
-          tenant-id: ${{ secrets.PP_TENANT_ID }}
-
       # 🚀 Create UDE Environment Asynchronously
       - name: Create UDE Environment (Async)
         run: |
