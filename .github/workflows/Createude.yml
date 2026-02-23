@@ -29,11 +29,6 @@ jobs:
       # ----------------------------------------
       # Authenticate using OIDC (Federated Credentials)
       # ----------------------------------------
-      - name: Authenticate to Power Platform
-        uses: microsoft/powerplatform-actions/authenticate@v1.9.1
-        with:
-          app-id: ${{ secrets.PP_CLIENT_ID }}
-          tenant-id: ${{ secrets.PP_TENANT_ID }}
 
       # ----------------------------------------
       # Create UDE Environment (Async)
