@@ -16,6 +16,10 @@ on:
           - product
           - product-apis
           - all
+      target_branch:
+        description: "Branch to commit export (example: apim-exports)"
+        required: true
+        default: "apim-exports"
 
 permissions:
   id-token: write
@@ -28,6 +32,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for branch operations
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -36,7 +42,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Create export folder
+      - name: Prepare Export Folder
         run: mkdir -p export
 
       - name: Export from DEV APIM
@@ -51,11 +57,9 @@ jobs:
           echo "Export Type: $TYPE"
           echo "Target: $ID"
 
-          # Replace spaces with dashes for safe file naming
-          SAFE_ID=$(echo "$ID" | tr ' ' '-')
+          SAFE_ID=$(echo "$ID" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
 
           if [ "$TYPE" = "api" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting API..."
             az apim api export \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -65,7 +69,6 @@ jobs:
           fi
 
           if [ "$TYPE" = "api-policy" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting API Policy..."
             az apim api policy show \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -74,7 +77,6 @@ jobs:
           fi
 
           if [ "$TYPE" = "product" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting Product..."
             az apim product show \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -83,7 +85,6 @@ jobs:
           fi
 
           if [ "$TYPE" = "product-apis" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting Product APIs..."
             az apim product api list \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -92,11 +93,9 @@ jobs:
           fi
 
       - name: Verify Export
-        run: |
-          echo "Exported Files:"
-          ls -la export
+        run: ls -la export
 
-      # ✅ Upload Artifact (NEW STEP)
+      # ✅ Upload as Workflow Artifact
       - name: Upload APIM Export Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -104,10 +103,26 @@ jobs:
           path: export/
           retention-days: 14
 
-      - name: Commit Exported Files
+      # ✅ Commit to Target Branch
+      - name: Commit Export to Branch
         run: |
+          set -e
+
+          BRANCH="${{ github.event.inputs.target_branch }}"
+
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch branches
+          git fetch origin
+
+          # Create branch if not exists
+          if git show-ref --verify --quiet refs/remotes/origin/$BRANCH; then
+            git checkout "$BRANCH"
+          else
+            git checkout -b "$BRANCH"
+          fi
+
           git add export/
-          git commit -m "Auto export from DEV APIM" || echo "No changes detected"
-          git push
+          git commit -m "APIM export for ${{ github.event.inputs.api_or_product_id }}" || echo "No changes to commit"
+          git push origin "$BRANCH"
