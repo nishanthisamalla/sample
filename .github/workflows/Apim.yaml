@@ -1,20 +1,16 @@
-name: APIM Git Sync
+name: APIM Full Git Sync
 
 on:
   workflow_dispatch:
     inputs:
-      api_or_product_id:
-        description: "API or Product ID (leave empty to export all)"
-        required: false
       export_type:
-        description: "What to export"
+        description: "Select what to export"
         required: true
         type: choice
         options:
+          - service
           - apis
-          - api-policy
           - products
-          - product-apis
           - all
 
 permissions:
@@ -38,19 +34,39 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Export APIM Components
+      - name: Export APIM Resources
         run: |
           set -e
 
           RG="${{ secrets.DEV_RG }}"
           APIM="${{ secrets.DEV_APIM }}"
-          ID="${{ github.event.inputs.api_or_product_id }}"
           TYPE="${{ github.event.inputs.export_type }}"
 
+          mkdir -p apim/service
           mkdir -p apim/apis
           mkdir -p apim/products
 
-          # ---------------- EXPORT ALL APIs ----------------
+          # ---------------- SERVICE LEVEL EXPORT ----------------
+          if [ "$TYPE" = "service" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting Service Level Resources..."
+
+            az apim nv list \
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              -o json > apim/service/named-values.json
+
+            az apim backend list \
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              -o json > apim/service/backends.json
+
+            az apim group list \
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              -o json > apim/service/groups.json
+          fi
+
+          # ---------------- API EXPORT ----------------
           if [ "$TYPE" = "apis" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting APIs..."
 
@@ -59,30 +75,35 @@ jobs:
               --service-name "$APIM" \
               --query "[].name" -o tsv)
 
-            for API_NAME in $APIS; do
-              SAFE_API=$(echo "$API_NAME" | tr '[:upper:]' '[:lower:]')
-
+            for API in $APIS; do
+              SAFE_API=$(echo "$API" | tr '[:upper:]' '[:lower:]')
               mkdir -p apim/apis/$SAFE_API
+
+              az apim api show \
+                --resource-group "$RG" \
+                --service-name "$APIM" \
+                --api-id "$API" \
+                -o json > "apim/apis/$SAFE_API/api.json"
 
               az apim api export \
                 --resource-group "$RG" \
                 --service-name "$APIM" \
-                --api-id "$API_NAME" \
+                --api-id "$API" \
                 --export-format OpenApiJsonFile \
                 --file-path apim/apis/$SAFE_API
 
               GENERATED=$(find apim/apis/$SAFE_API -name "*openapi*.json" | head -n1)
-              [ -f "$GENERATED" ] && mv "$GENERATED" "apim/apis/$SAFE_API/$SAFE_API.json"
+              [ -f "$GENERATED" ] && mv "$GENERATED" "apim/apis/$SAFE_API/openapi.json"
 
               az apim api policy show \
                 --resource-group "$RG" \
                 --service-name "$APIM" \
-                --api-id "$API_NAME" \
+                --api-id "$API" \
                 --format rawxml > "apim/apis/$SAFE_API/policy.xml" || true
             done
           fi
 
-          # ---------------- EXPORT PRODUCTS ----------------
+          # ---------------- PRODUCT EXPORT ----------------
           if [ "$TYPE" = "products" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Products..."
 
@@ -93,20 +114,19 @@ jobs:
 
             for PROD in $PRODUCTS; do
               SAFE_PROD=$(echo "$PROD" | tr '[:upper:]' '[:lower:]')
-
               mkdir -p apim/products/$SAFE_PROD
 
               az apim product show \
                 --resource-group "$RG" \
                 --service-name "$APIM" \
                 --product-id "$PROD" \
-                --output json > "apim/products/$SAFE_PROD/product.json"
+                -o json > "apim/products/$SAFE_PROD/product.json"
 
               az apim product api list \
                 --resource-group "$RG" \
                 --service-name "$APIM" \
                 --product-id "$PROD" \
-                --output json > "apim/products/$SAFE_PROD/apis.json"
+                -o json > "apim/products/$SAFE_PROD/apis.json"
             done
           fi
 
@@ -121,5 +141,5 @@ jobs:
           fi
 
           git add apim/
-          git commit -m "APIM sync update"
+          git commit -m "APIM full sync update"
           git push
