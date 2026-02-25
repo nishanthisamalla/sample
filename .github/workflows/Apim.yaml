@@ -38,6 +38,10 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Install APIM Extension
+        run: |
+          az extension add --name apim --upgrade
+
       - name: Create export folder
         run: mkdir -p export
 
@@ -56,15 +60,20 @@ jobs:
           SAFE_ID=$(echo "$ID" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
 
           if [ "$TYPE" = "api" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting API..."
             az apim api export \
               --resource-group "$RG" \
               --service-name "$APIM" \
               --api-id "$ID" \
-              --export-format OpenApiJsonFile \
-              --file-path "export/${SAFE_ID}.json"
+              --export-format OpenApiJson \
+              --file-path "export"
+
+            # Rename generated file to clean format
+            mv export/*_openapi+json.json "export/${SAFE_ID}.json" 2>/dev/null || true
           fi
 
           if [ "$TYPE" = "api-policy" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting API Policy..."
             az apim api policy show \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -73,19 +82,21 @@ jobs:
           fi
 
           if [ "$TYPE" = "product" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting Product..."
             az apim product show \
               --resource-group "$RG" \
               --service-name "$APIM" \
               --product-id "$ID" \
-              --output json > "export/${SAFE_ID}-product.json"
+              --output json > "export/${SAFE_ID}-product.json" || true
           fi
 
           if [ "$TYPE" = "product-apis" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting Product APIs..."
             az apim product api list \
               --resource-group "$RG" \
               --service-name "$APIM" \
               --product-id "$ID" \
-              --output json > "export/${SAFE_ID}-product-apis.json"
+              --output json > "export/${SAFE_ID}-product-apis.json" || true
           fi
 
       - name: Verify Export
@@ -96,7 +107,6 @@ jobs:
           set -e
 
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
-
           echo "Committing to branch: $CURRENT_BRANCH"
 
           git config user.name "github-actions[bot]"
@@ -106,4 +116,5 @@ jobs:
 
           git add export/
           git commit -m "APIM export for ${{ github.event.inputs.api_or_product_id }}" || echo "No changes to commit"
+
           git push origin "$CURRENT_BRANCH"
