@@ -41,49 +41,54 @@ jobs:
 
       - name: Export from DEV APIM
         run: |
+          set -e
+
           echo "Export Type: ${{ github.event.inputs.export_type }}"
           echo "Target: ${{ github.event.inputs.api_or_product_id }}"
 
-          RG=${{ secrets.DEV_RG }}
-          APIM=${{ secrets.DEV_APIM }}
-          ID=${{ github.event.inputs.api_or_product_id }}
-          TYPE=${{ github.event.inputs.export_type }}
+          RG="${{ secrets.DEV_RG }}"
+          APIM="${{ secrets.DEV_APIM }}"
+          ID="${{ github.event.inputs.api_or_product_id }}"
+          TYPE="${{ github.event.inputs.export_type }}"
+
+          # Safe file name (replace spaces with dashes)
+          SAFE_ID=$(echo "$ID" | tr ' ' '-')
 
           if [ "$TYPE" = "api" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting API..."
             az apim api export \
-              --resource-group $RG \
-              --service-name $APIM \
-              --api-id $ID \
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              --api-id "$ID" \
               --export-format OpenApiJsonFile \
-              --file-path export/${ID}.json
+              --file-path "export/${SAFE_ID}.json"
           fi
 
           if [ "$TYPE" = "api-policy" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting API Policy..."
             az apim api policy show \
-              --resource-group $RG \
-              --service-name $APIM \
-              --api-id $ID \
-              --format rawxml > export/${ID}-policy.xml
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              --api-id "$ID" \
+              --format rawxml > "export/${SAFE_ID}-policy.xml"
           fi
 
           if [ "$TYPE" = "product" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Product..."
             az apim product show \
-              --resource-group $RG \
-              --service-name $APIM \
-              --product-id $ID \
-              --output json > export/${ID}-product.json
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              --product-id "$ID" \
+              --output json > "export/${SAFE_ID}-product.json"
           fi
 
           if [ "$TYPE" = "product-apis" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Product APIs..."
             az apim product api list \
-              --resource-group $RG \
-              --service-name $APIM \
-              --product-id $ID \
-              --output json > export/${ID}-product-apis.json
+              --resource-group "$RG" \
+              --service-name "$APIM" \
+              --product-id "$ID" \
+              --output json > "export/${SAFE_ID}-product-apis.json"
           fi
 
       - name: Verify Export
