@@ -55,21 +55,29 @@ jobs:
 
           SAFE_ID=$(echo "$ID" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
 
+          # ---------- API EXPORT ----------
           if [ "$TYPE" = "api" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting API..."
+
             az apim api export \
               --resource-group "$RG" \
               --service-name "$APIM" \
               --api-id "$ID" \
-              --export-format OpenApiJson \
+              --export-format OpenApiJsonFile \
               --file-path "export"
 
-            # Rename Azure-generated file to clean name
-            mv export/*_openapi+json.json "export/${SAFE_ID}.json" 2>/dev/null || true
+            # Handle Azure CLI generated structure
+            GENERATED_FILE=$(find export -name "*openapi*.json" | head -n 1)
+
+            if [ -f "$GENERATED_FILE" ]; then
+              mv "$GENERATED_FILE" "export/${SAFE_ID}.json"
+            fi
           fi
 
+          # ---------- API POLICY EXPORT ----------
           if [ "$TYPE" = "api-policy" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting API Policy..."
+
             az apim api policy show \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -77,8 +85,10 @@ jobs:
               --format rawxml > "export/${SAFE_ID}-policy.xml" || true
           fi
 
+          # ---------- PRODUCT EXPORT ----------
           if [ "$TYPE" = "product" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Product..."
+
             az apim product show \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -86,8 +96,10 @@ jobs:
               --output json > "export/${SAFE_ID}-product.json" || true
           fi
 
+          # ---------- PRODUCT APIS EXPORT ----------
           if [ "$TYPE" = "product-apis" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Product APIs..."
+
             az apim product api list \
               --resource-group "$RG" \
               --service-name "$APIM" \
@@ -96,7 +108,7 @@ jobs:
           fi
 
       - name: Verify Export
-        run: ls -la export
+        run: ls -R export
 
       - name: Commit Exported Files
         run: |
