@@ -29,7 +29,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC Recommended)
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -43,15 +43,15 @@ jobs:
         run: |
           set -e
 
-          echo "Export Type: ${{ github.event.inputs.export_type }}"
-          echo "Target: ${{ github.event.inputs.api_or_product_id }}"
-
           RG="${{ secrets.DEV_RG }}"
           APIM="${{ secrets.DEV_APIM }}"
           ID="${{ github.event.inputs.api_or_product_id }}"
           TYPE="${{ github.event.inputs.export_type }}"
 
-          # Safe file name (replace spaces with dashes)
+          echo "Export Type: $TYPE"
+          echo "Target: $ID"
+
+          # Replace spaces with dashes for safe file naming
           SAFE_ID=$(echo "$ID" | tr ' ' '-')
 
           if [ "$TYPE" = "api" ] || [ "$TYPE" = "all" ]; then
@@ -96,10 +96,18 @@ jobs:
           echo "Exported Files:"
           ls -la export
 
+      # ✅ Upload Artifact (NEW STEP)
+      - name: Upload APIM Export Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apim-export-${{ github.run_number }}
+          path: export/
+          retention-days: 14
+
       - name: Commit Exported Files
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com]"
           git add export/
           git commit -m "Auto export from DEV APIM" || echo "No changes detected"
           git push
