@@ -49,7 +49,7 @@ jobs:
           mkdir -p apim/products
 
           ############################################
-          # SERVICE LEVEL EXPORT (REST-BASED)
+          # SERVICE LEVEL EXPORT (REST BASED)
           ############################################
           if [ "$TYPE" = "service" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Service-Level Components..."
@@ -82,12 +82,14 @@ jobs:
               SAFE_API=$(echo "$API" | tr '[:upper:]' '[:lower:]')
               mkdir -p apim/apis/$SAFE_API
 
+              # API metadata
               az apim api show \
                 --resource-group "$RG" \
                 --service-name "$APIM" \
                 --api-id "$API" \
                 -o json > "apim/apis/$SAFE_API/api.json"
 
+              # OpenAPI export
               az apim api export \
                 --resource-group "$RG" \
                 --service-name "$APIM" \
@@ -98,12 +100,11 @@ jobs:
               GENERATED=$(find apim/apis/$SAFE_API -name "*openapi*.json" | head -n1)
               [ -f "$GENERATED" ] && mv "$GENERATED" "apim/apis/$SAFE_API/openapi.json"
 
-              az apim api policy show \
-                --resource-group "$RG" \
-                --service-name "$APIM" \
-                --api-id "$API" \
-                --format rawxml \
-                > "apim/apis/$SAFE_API/policy.xml" || true
+              # Policy via REST (version-proof)
+              az rest --method get \
+                --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.ApiManagement/service/$APIM/apis/$API/policies/policy?api-version=$API_VERSION" \
+                | jq -r '.properties.value' \
+                > "apim/apis/$SAFE_API/policy.xml" 2>/dev/null || true
             done
           fi
 
