@@ -1,19 +1,19 @@
-name: Sync APIM Dev Export
+name: APIM Git Sync
 
 on:
   workflow_dispatch:
     inputs:
       api_or_product_id:
-        description: "API ID OR Product ID in APIM"
-        required: true
+        description: "API or Product ID (leave empty to export all)"
+        required: false
       export_type:
-        description: "Select what to export"
+        description: "What to export"
         required: true
         type: choice
         options:
-          - api
+          - apis
           - api-policy
-          - product
+          - products
           - product-apis
           - all
 
@@ -26,22 +26,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Create export folder
-        run: mkdir -p export
-
-      - name: Export from DEV APIM
+      - name: Export APIM Components
         run: |
           set -e
 
@@ -50,79 +47,79 @@ jobs:
           ID="${{ github.event.inputs.api_or_product_id }}"
           TYPE="${{ github.event.inputs.export_type }}"
 
-          echo "Export Type: $TYPE"
-          echo "Target: $ID"
+          mkdir -p apim/apis
+          mkdir -p apim/products
 
-          SAFE_ID=$(echo "$ID" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+          # ---------------- EXPORT ALL APIs ----------------
+          if [ "$TYPE" = "apis" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting APIs..."
 
-          # ---------- API EXPORT ----------
-          if [ "$TYPE" = "api" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting API..."
-
-            az apim api export \
+            APIS=$(az apim api list \
               --resource-group "$RG" \
               --service-name "$APIM" \
-              --api-id "$ID" \
-              --export-format OpenApiJsonFile \
-              --file-path "export"
+              --query "[].name" -o tsv)
 
-            # Handle Azure CLI generated structure
-            GENERATED_FILE=$(find export -name "*openapi*.json" | head -n 1)
+            for API_NAME in $APIS; do
+              SAFE_API=$(echo "$API_NAME" | tr '[:upper:]' '[:lower:]')
 
-            if [ -f "$GENERATED_FILE" ]; then
-              mv "$GENERATED_FILE" "export/${SAFE_ID}.json"
-            fi
+              mkdir -p apim/apis/$SAFE_API
+
+              az apim api export \
+                --resource-group "$RG" \
+                --service-name "$APIM" \
+                --api-id "$API_NAME" \
+                --export-format OpenApiJsonFile \
+                --file-path apim/apis/$SAFE_API
+
+              GENERATED=$(find apim/apis/$SAFE_API -name "*openapi*.json" | head -n1)
+              [ -f "$GENERATED" ] && mv "$GENERATED" "apim/apis/$SAFE_API/$SAFE_API.json"
+
+              az apim api policy show \
+                --resource-group "$RG" \
+                --service-name "$APIM" \
+                --api-id "$API_NAME" \
+                --format rawxml > "apim/apis/$SAFE_API/policy.xml" || true
+            done
           fi
 
-          # ---------- API POLICY EXPORT ----------
-          if [ "$TYPE" = "api-policy" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting API Policy..."
+          # ---------------- EXPORT PRODUCTS ----------------
+          if [ "$TYPE" = "products" ] || [ "$TYPE" = "all" ]; then
+            echo "Exporting Products..."
 
-            az apim api policy show \
+            PRODUCTS=$(az apim product list \
               --resource-group "$RG" \
               --service-name "$APIM" \
-              --api-id "$ID" \
-              --format rawxml > "export/${SAFE_ID}-policy.xml" || true
+              --query "[].name" -o tsv)
+
+            for PROD in $PRODUCTS; do
+              SAFE_PROD=$(echo "$PROD" | tr '[:upper:]' '[:lower:]')
+
+              mkdir -p apim/products/$SAFE_PROD
+
+              az apim product show \
+                --resource-group "$RG" \
+                --service-name "$APIM" \
+                --product-id "$PROD" \
+                --output json > "apim/products/$SAFE_PROD/product.json"
+
+              az apim product api list \
+                --resource-group "$RG" \
+                --service-name "$APIM" \
+                --product-id "$PROD" \
+                --output json > "apim/products/$SAFE_PROD/apis.json"
+            done
           fi
 
-          # ---------- PRODUCT EXPORT ----------
-          if [ "$TYPE" = "product" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting Product..."
-
-            az apim product show \
-              --resource-group "$RG" \
-              --service-name "$APIM" \
-              --product-id "$ID" \
-              --output json > "export/${SAFE_ID}-product.json" || true
-          fi
-
-          # ---------- PRODUCT APIS EXPORT ----------
-          if [ "$TYPE" = "product-apis" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting Product APIs..."
-
-            az apim product api list \
-              --resource-group "$RG" \
-              --service-name "$APIM" \
-              --product-id "$ID" \
-              --output json > "export/${SAFE_ID}-product-apis.json" || true
-          fi
-
-      - name: Verify Export
-        run: ls -R export
-
-      - name: Commit Exported Files
+      - name: Commit Only If Changes Exist
         run: |
-          set -e
-
-          CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
-          echo "Committing to branch: $CURRENT_BRANCH"
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git checkout "$CURRENT_BRANCH"
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes detected. Skipping commit."
+            exit 0
+          fi
 
-          git add export/
-          git commit -m "APIM export for ${{ github.event.inputs.api_or_product_id }}" || echo "No changes to commit"
-
-          git push origin "$CURRENT_BRANCH"
+          git add apim/
+          git commit -m "APIM sync update"
+          git push
