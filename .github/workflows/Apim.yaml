@@ -38,10 +38,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install APIM Extension
-        run: |
-          az extension add --name apim --upgrade
-
       - name: Create export folder
         run: mkdir -p export
 
@@ -68,7 +64,7 @@ jobs:
               --export-format OpenApiJson \
               --file-path "export"
 
-            # Rename generated file to clean format
+            # Rename Azure-generated file to clean name
             mv export/*_openapi+json.json "export/${SAFE_ID}.json" 2>/dev/null || true
           fi
 
@@ -78,7 +74,7 @@ jobs:
               --resource-group "$RG" \
               --service-name "$APIM" \
               --api-id "$ID" \
-              --format rawxml > "export/${SAFE_ID}-policy.xml"
+              --format rawxml > "export/${SAFE_ID}-policy.xml" || true
           fi
 
           if [ "$TYPE" = "product" ] || [ "$TYPE" = "all" ]; then
