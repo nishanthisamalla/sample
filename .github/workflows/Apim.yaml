@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -40,33 +40,36 @@ jobs:
 
           RG="${{ secrets.DEV_RG }}"
           APIM="${{ secrets.DEV_APIM }}"
+          SUB="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           TYPE="${{ github.event.inputs.export_type }}"
+          API_VERSION="2022-08-01"
 
           mkdir -p apim/service
           mkdir -p apim/apis
           mkdir -p apim/products
 
-          # ---------------- SERVICE LEVEL EXPORT ----------------
+          ############################################
+          # SERVICE LEVEL EXPORT (REST-BASED)
+          ############################################
           if [ "$TYPE" = "service" ] || [ "$TYPE" = "all" ]; then
-            echo "Exporting Service Level Resources..."
+            echo "Exporting Service-Level Components..."
 
-            az apim nv list \
-              --resource-group "$RG" \
-              --service-name "$APIM" \
-              -o json > apim/service/named-values.json
+            az rest --method get \
+              --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.ApiManagement/service/$APIM/namedValues?api-version=$API_VERSION" \
+              > apim/service/named-values.json
 
-            az apim backend list \
-              --resource-group "$RG" \
-              --service-name "$APIM" \
-              -o json > apim/service/backends.json
+            az rest --method get \
+              --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.ApiManagement/service/$APIM/backends?api-version=$API_VERSION" \
+              > apim/service/backends.json || true
 
-            az apim group list \
-              --resource-group "$RG" \
-              --service-name "$APIM" \
-              -o json > apim/service/groups.json
+            az rest --method get \
+              --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.ApiManagement/service/$APIM/groups?api-version=$API_VERSION" \
+              > apim/service/groups.json
           fi
 
-          # ---------------- API EXPORT ----------------
+          ############################################
+          # API EXPORT
+          ############################################
           if [ "$TYPE" = "apis" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting APIs..."
 
@@ -90,7 +93,7 @@ jobs:
                 --service-name "$APIM" \
                 --api-id "$API" \
                 --export-format OpenApiJsonFile \
-                --file-path apim/apis/$SAFE_API
+                --file-path "apim/apis/$SAFE_API"
 
               GENERATED=$(find apim/apis/$SAFE_API -name "*openapi*.json" | head -n1)
               [ -f "$GENERATED" ] && mv "$GENERATED" "apim/apis/$SAFE_API/openapi.json"
@@ -99,11 +102,14 @@ jobs:
                 --resource-group "$RG" \
                 --service-name "$APIM" \
                 --api-id "$API" \
-                --format rawxml > "apim/apis/$SAFE_API/policy.xml" || true
+                --format rawxml \
+                > "apim/apis/$SAFE_API/policy.xml" || true
             done
           fi
 
-          # ---------------- PRODUCT EXPORT ----------------
+          ############################################
+          # PRODUCT EXPORT
+          ############################################
           if [ "$TYPE" = "products" ] || [ "$TYPE" = "all" ]; then
             echo "Exporting Products..."
 
@@ -130,6 +136,9 @@ jobs:
             done
           fi
 
+      ############################################
+      # COMMIT ONLY IF CHANGES EXIST
+      ############################################
       - name: Commit Only If Changes Exist
         run: |
           git config user.name "github-actions[bot]"
@@ -141,5 +150,5 @@ jobs:
           fi
 
           git add apim/
-          git commit -m "APIM full sync update"
+          git commit -m "APIM sync update"
           git push
