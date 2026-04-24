@@ -15,8 +15,23 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Power Platform Tools
+      - name: Ensure required tooling (jq)
+        shell: bash
+        run: |
+         sudo apt-get update -y
+         sudo apt-get install -y jq
+         jq --version
+ 
+      - name: Setup .NET (for PAC)
+        uses: actions/setup-dotnet@v4
+        with:
+         dotnet-version: '9.x'
+ 
+      - name: Install Power Platform CLI (Marketplace)
         uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+        with:
+         add-tools-to-path: true
+ 
 
       # Create environment using federated credentials (no client secret)
       - name: Create UDE environment
