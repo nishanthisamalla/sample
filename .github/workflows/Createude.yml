@@ -16,8 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       # Install PAC CLI wrapper actions
-      - name: Install Power Platform Actions
-        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
+      - uses: microsoft/powerplatform-actions/actions-install@v1.9.1
 
       # Create environment using federated credentials (no client secret)
       - name: Create UDE environment
