@@ -1,0 +1,84 @@
+name: Power Platform PROD Deployment with Rollback
+
+on:
+workflow_dispatch:
+
+jobs:
+deploy:
+runs-on: ubuntu-latest
+environment: production   # enables approval gate
+
+```
+steps:
+
+# 1. Checkout repo
+- name: Checkout
+  uses: actions/checkout@v4
+
+# 2. Install PAC CLI
+- name: Install PAC CLI
+  run: |
+    dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+    echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+# 3. Authenticate (Service Principal)
+- name: Authenticate
+  run: |
+    pac auth create \
+      --name prod \
+      --url ${{ secrets.POWER_PLATFORM_URL }} \
+      --applicationId ${{ secrets.CLIENT_ID }} \
+      --clientSecret ${{ secrets.CLIENT_SECRET }} \
+      --tenant ${{ secrets.TENANT_ID }}
+
+    pac auth select --name prod
+
+# 4. Export current PROD managed solution (backup)
+- name: Export current PROD solution
+  run: |
+    pac solution export \
+      --name YourSolution \
+      --path backup.zip \
+      --managed true
+
+# 5. Upload backup artifact
+- name: Upload backup
+  uses: actions/upload-artifact@v4
+  with:
+    name: rollback-solution
+    path: backup.zip
+
+# 6. Import new solution (synchronous for safety)
+- name: Import new solution
+  id: import_solution
+  run: |
+    pac solution import \
+      --path solutions/new-solution.zip \
+      --publish-changes true
+
+# 7. Validate deployment (real check)
+- name: Validate solution import
+  id: validate
+  run: |
+    echo "Checking solution exists in environment..."
+
+    pac solution list --json > solutions.json
+
+    cat solutions.json | grep "YourSolution"
+
+# 8. Rollback trigger
+- name: Download backup
+  if: failure()
+  uses: actions/download-artifact@v4
+  with:
+    name: rollback-solution
+
+- name: Rollback to previous version
+  if: failure()
+  run: |
+    echo "Rollback triggered..."
+
+    pac solution import \
+      --path backup.zip \
+      --publish-changes true
+```
