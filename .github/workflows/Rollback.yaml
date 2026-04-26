@@ -18,18 +18,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
  
-      - name: Install PAC CLI
-        shell: bash
-        run: |
-          dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+      - name: Install Power Platform CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1.9.1
  
       - name: Authenticate to Power Platform
         shell: bash
         run: |
           pac auth create \
             --name "prod" \
-            --url "${{ secrets.POWER_PLATFORM_URL }}" \
+            --environement "${{ secrets.POWER_PLATFORM_URL }}" \
             --applicationId "${{ secrets.CLIENT_ID }}" \
             --clientSecret "${{ secrets.CLIENT_SECRET }}" \
             --tenant "${{ secrets.TENANT_ID }}"
