@@ -1,84 +1,91 @@
 name: Power Platform PROD Deployment with Rollback
-
+ 
 on:
-workflow_dispatch:
-
+  workflow_dispatch: {}
+ 
+env:
+  SOLUTION_NAME: "YourSolution"
+  NEW_SOLUTION_PATH: "solutions/new-solution.zip"
+  BACKUP_FILE: "backup.zip"
+ 
 jobs:
-deploy:
-runs-on: ubuntu-latest
-environment: production   # enables approval gate
-
-```
-steps:
-
-# 1. Checkout repo
-- name: Checkout
-  uses: actions/checkout@v4
-
-# 2. Install PAC CLI
-- name: Install PAC CLI
-  run: |
-    dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-    echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-# 3. Authenticate (Service Principal)
-- name: Authenticate
-  run: |
-    pac auth create \
-      --name prod \
-      --url ${{ secrets.POWER_PLATFORM_URL }} \
-      --applicationId ${{ secrets.CLIENT_ID }} \
-      --clientSecret ${{ secrets.CLIENT_SECRET }} \
-      --tenant ${{ secrets.TENANT_ID }}
-
-    pac auth select --name prod
-
-# 4. Export current PROD managed solution (backup)
-- name: Export current PROD solution
-  run: |
-    pac solution export \
-      --name YourSolution \
-      --path backup.zip \
-      --managed true
-
-# 5. Upload backup artifact
-- name: Upload backup
-  uses: actions/upload-artifact@v4
-  with:
-    name: rollback-solution
-    path: backup.zip
-
-# 6. Import new solution (synchronous for safety)
-- name: Import new solution
-  id: import_solution
-  run: |
-    pac solution import \
-      --path solutions/new-solution.zip \
-      --publish-changes true
-
-# 7. Validate deployment (real check)
-- name: Validate solution import
-  id: validate
-  run: |
-    echo "Checking solution exists in environment..."
-
-    pac solution list --json > solutions.json
-
-    cat solutions.json | grep "YourSolution"
-
-# 8. Rollback trigger
-- name: Download backup
-  if: failure()
-  uses: actions/download-artifact@v4
-  with:
-    name: rollback-solution
-
-- name: Rollback to previous version
-  if: failure()
-  run: |
-    echo "Rollback triggered..."
-
-    pac solution import \
-      --path backup.zip \
-      --publish-changes true
-```
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+ 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+ 
+      - name: Install PAC CLI
+        shell: bash
+        run: |
+          dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+ 
+      - name: Authenticate to Power Platform
+        shell: bash
+        run: |
+          pac auth create \
+            --name "prod" \
+            --url "${{ secrets.POWER_PLATFORM_URL }}" \
+            --applicationId "${{ secrets.CLIENT_ID }}" \
+            --clientSecret "${{ secrets.CLIENT_SECRET }}" \
+            --tenant "${{ secrets.TENANT_ID }}"
+ 
+          pac auth select --name "prod"
+ 
+      - name: Export current PROD solution
+        shell: bash
+        run: |
+          echo "Exporting solution..."
+          pac solution export \
+            --name "${{ env.SOLUTION_NAME }}" \
+            --path "${{ env.BACKUP_FILE }}" \
+            --managed true
+ 
+      - name: Upload rollback artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-solution
+          path: ${{ env.BACKUP_FILE }}
+ 
+      - name: Import new solution
+        id: import_solution
+        shell: bash
+        run: |
+          echo "Importing new solution..."
+          pac solution import \
+            --path "${{ env.NEW_SOLUTION_PATH }}" \
+            --publish-changes true
+ 
+      - name: Validate deployment
+        id: validate
+        shell: bash
+        run: |
+          echo "Validating deployment..."
+          pac solution list --json > solutions.json
+ 
+          if grep -q "${{ env.SOLUTION_NAME }}" solutions.json; then
+            echo "Validation passed"
+          else
+            echo "Validation failed"
+            exit 1
+          fi
+ 
+      - name: Download rollback artifact
+        if: ${{ failure() }}
+        uses: actions/download-artifact@v4
+        with:
+          name: rollback-solution
+ 
+      - name: Rollback to previous version
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          echo "Rollback triggered..."
+          pac solution import \
+            --path "${{ env.BACKUP_FILE }}" \
+            --publish-changes true
+          echo "Rollback completed"
